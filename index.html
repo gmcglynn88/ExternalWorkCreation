@@ -51,22 +51,28 @@
 
   <script>
     // Initialize Genesys Cloud Client using the Token Implicit Grant
-    const client = new window.GenesysCloudClient({
+    const clientApp = new window.purecloud.apps.ClientApp({
+      pcEnvironment: 'mypurecloud.ie',  // Replace with your specific Genesys Cloud environment
       clientId: '35987d94-e13b-4da4-afd2-25b85bc1c3d6',  // Replace with your OAuth Client ID
-      redirectUri: 'https://gmcglynn88.github.io/ExternalWorkCreation/',  // Your Redirect URI
-      environment: 'mypurecloud.ie'  // Replace with your Genesys Cloud environment
+      redirectUri: 'https://gmcglynn88.github.io/ExternalWorkCreation/'  // Your Redirect URI
     });
 
     document.addEventListener('DOMContentLoaded', async () => {
       try {
         console.log('Attempting to authenticate with Implicit Grant...');
         // Authenticate client - this will redirect to login page if not already logged in
-        await client.loginImplicitGrant();
+        await clientApp.loginImplicitGrant();
 
         console.log('Successfully authenticated.');
 
+        // Fetch API tokens and make API requests
+        const token = await clientApp.getAccessToken();
+
         // Populate the Queue dropdown
-        const queues = await client.get('/api/v2/routing/queues');
+        const queuesResponse = await fetch('https://api.mypurecloud.ie/api/v2/routing/queues', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const queues = await queuesResponse.json();
         const queueSelect = document.getElementById('queueSelect');
         queues.entities.forEach(queue => {
           const option = document.createElement('option');
@@ -76,7 +82,10 @@
         });
 
         // Populate the User dropdown
-        const users = await client.get('/api/v2/users');
+        const usersResponse = await fetch('https://api.mypurecloud.ie/api/v2/users', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const users = await usersResponse.json();
         const userSelect = document.getElementById('userSelect');
         users.entities.forEach(user => {
           const option = document.createElement('option');
@@ -94,22 +103,38 @@
           try {
             console.log('Creating proxy interaction...');
             // Create a proxy interaction
-            const interaction = await client.post('/api/v2/conversations/emails', {
-              queueId: queueId,
-              provider: 'QualityForm',
-              direction: 'INBOUND',
-              fromName: 'External Work',
-              attributes: { 'External Link': externalReference }
+            const interactionResponse = await fetch('https://api.mypurecloud.ie/api/v2/conversations/emails', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                queueId: queueId,
+                provider: 'QualityForm',
+                direction: 'INBOUND',
+                fromName: 'External Work',
+                attributes: { 'External Link': externalReference }
+              })
             });
 
+            const interaction = await interactionResponse.json();
             console.log('Proxy interaction created. Assigning to user...');
 
             // Assign the interaction to the selected user
             const conversationId = interaction.id;
-            const conversationDetails = await client.get(`/api/v2/conversations/${conversationId}`);
-            const participantId = conversationDetails.participants[1].id; // Get the agent participant ID
-            await client.post(`/api/v2/conversations/emails/${conversationId}/participants/${participantId}/replace`, {
-              userId: userId
+            const conversationDetailsResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const conversationDetails = await conversationDetailsResponse.json();
+            const participantId = conversationDetails.participants[1].id;
+            await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}/participants/${participantId}/replace`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ userId: userId })
             });
 
             document.getElementById('statusMessage').innerText = 'Interaction created and assigned successfully!';
