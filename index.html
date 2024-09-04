@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>External Work Creation</title>
   <!-- Include Genesys Cloud SDK from the correct environment -->
-  <script src="https://apps.mypurecloud.ie/javascript/genesys-cloud-client-app-sdk.min.js"></script>
+  <script src="https://sdk-cdn.mypurecloud.com/javascript/genesys-cloud-client-app-sdk.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -52,14 +52,17 @@
   <script>
     window.addEventListener('load', () => {
       try {
+        // Ensure the Genesys Cloud SDK is loaded properly
         if (!window.purecloud || !window.purecloud.apps) {
           throw new Error('Genesys Cloud Client App SDK not loaded properly.');
         }
 
+        // Initialize Genesys Cloud Client App
         const clientApp = new window.purecloud.apps.ClientApp({
-          pcEnvironment: 'mypurecloud.ie'  // Your specific Genesys Cloud environment
+          pcEnvironment: 'mypurecloud.ie' // Your specific Genesys Cloud environment
         });
 
+        // Start the app lifecycle
         clientApp.lifecycle.bootstrapped().then(() => {
           console.log('Client app is bootstrapped.');
           initializeApp(clientApp);
@@ -76,6 +79,7 @@
         console.log('Client app is running.');
 
         try {
+          // Get the access token
           const token = await clientApp.getAccessToken();
           console.log('Access Token:', token);
 
@@ -83,8 +87,10 @@
             throw new Error('Access token not retrieved. Ensure OAuth settings are correct.');
           }
 
+          // Fetch data and populate dropdowns
           populateDropdowns(token);
 
+          // Handle button click
           document.getElementById('createInteractionBtn').addEventListener('click', () => {
             createInteraction(token);
           });
@@ -102,6 +108,7 @@
       try {
         console.log('Fetching queues and users data...');
 
+        // Populate Queues
         const queuesResponse = await fetch('https://api.mypurecloud.ie/api/v2/routing/queues', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -119,6 +126,7 @@
 
         console.log('Queues fetched successfully:', queues.entities);
 
+        // Populate Users
         const usersResponse = await fetch('https://api.mypurecloud.ie/api/v2/users', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
