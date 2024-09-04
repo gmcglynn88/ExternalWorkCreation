@@ -56,7 +56,6 @@
           throw new Error('Genesys Cloud Client App SDK not loaded properly.');
         }
 
-        // Initialize Genesys Cloud Client App
         const clientApp = new window.purecloud.apps.ClientApp({
           pcEnvironment: 'mypurecloud.ie'  // Your specific Genesys Cloud environment
         });
@@ -77,7 +76,6 @@
         console.log('Client app is running.');
 
         try {
-          // Get the access token
           const token = await clientApp.getAccessToken();
           console.log('Access Token:', token);
 
@@ -85,10 +83,8 @@
             throw new Error('Access token not retrieved. Ensure OAuth settings are correct.');
           }
 
-          // Fetch data and populate dropdowns
           populateDropdowns(token);
 
-          // Handle button click
           document.getElementById('createInteractionBtn').addEventListener('click', () => {
             createInteraction(token);
           });
@@ -106,7 +102,6 @@
       try {
         console.log('Fetching queues and users data...');
 
-        // Populate Queues
         const queuesResponse = await fetch('https://api.mypurecloud.ie/api/v2/routing/queues', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -124,7 +119,6 @@
 
         console.log('Queues fetched successfully:', queues.entities);
 
-        // Populate Users
         const usersResponse = await fetch('https://api.mypurecloud.ie/api/v2/users', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -177,7 +171,6 @@
         const interaction = await interactionResponse.json();
         console.log('Proxy interaction created:', interaction);
 
-        // Get participant ID
         const conversationId = interaction.id;
         const conversationDetailsResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -188,7 +181,6 @@
         const conversationDetails = await conversationDetailsResponse.json();
         const participantId = conversationDetails.participants[1].id;
 
-        // Assign to user
         console.log('Assigning to user...');
         const assignResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}/participants/${participantId}/replace`, {
           method: 'POST',
@@ -205,7 +197,6 @@
 
         console.log('User assigned successfully.');
 
-        // Disconnect the conversation
         console.log('Disconnecting conversation...');
         const disconnectResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}`, {
           method: 'PATCH',
