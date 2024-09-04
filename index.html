@@ -50,19 +50,14 @@
   <div id="statusMessage"></div>
 
   <script>
-    window.addEventListener('load', () => {
+    document.addEventListener('DOMContentLoaded', () => {
       try {
-        // Ensure the Genesys Cloud SDK is loaded properly
-        if (!window.purecloud || !window.purecloud.apps) {
-          throw new Error('Genesys Cloud Client App SDK not loaded properly.');
-        }
-
-        // Initialize Genesys Cloud Client App
+        // Initialize Genesys Cloud Client App using the JavaScript SDK
         const clientApp = new window.purecloud.apps.ClientApp({
-          pcEnvironment: 'mypurecloud.ie' // Your specific Genesys Cloud environment
+          pcEnvironment: 'mypurecloud.ie'  // Your specific Genesys Cloud environment
         });
 
-        // Start the app lifecycle
+        // Authenticate using the Implicit Grant flow
         clientApp.lifecycle.bootstrapped().then(() => {
           console.log('Client app is bootstrapped.');
           initializeApp(clientApp);
@@ -79,7 +74,7 @@
         console.log('Client app is running.');
 
         try {
-          // Get the access token
+          // Get the access token using Implicit Grant
           const token = await clientApp.getAccessToken();
           console.log('Access Token:', token);
 
@@ -87,7 +82,7 @@
             throw new Error('Access token not retrieved. Ensure OAuth settings are correct.');
           }
 
-          // Fetch data and populate dropdowns
+          // Populate dropdowns
           populateDropdowns(token);
 
           // Handle button click
@@ -108,7 +103,7 @@
       try {
         console.log('Fetching queues and users data...');
 
-        // Populate Queues
+        // Fetch Queues
         const queuesResponse = await fetch('https://api.mypurecloud.ie/api/v2/routing/queues', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -126,7 +121,7 @@
 
         console.log('Queues fetched successfully:', queues.entities);
 
-        // Populate Users
+        // Fetch Users
         const usersResponse = await fetch('https://api.mypurecloud.ie/api/v2/users', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
