@@ -50,22 +50,16 @@
   <div id="statusMessage"></div>
 
   <script>
-    // Initialize Genesys Cloud Client using the Token Implicit Grant
+    // Initialize Genesys Cloud Client App
     const clientApp = new window.purecloud.apps.ClientApp({
-      pcEnvironment: 'mypurecloud.ie',  // Replace with your specific Genesys Cloud environment
-      clientId: '35987d94-e13b-4da4-afd2-25b85bc1c3d6',  // Replace with your OAuth Client ID
-      redirectUri: 'https://gmcglynn88.github.io/ExternalWorkCreation/'  // Your Redirect URI
+      pcEnvironment: 'mypurecloud.ie'  // Replace with your specific Genesys Cloud environment
     });
 
-    document.addEventListener('DOMContentLoaded', async () => {
+    clientApp.run().then(async () => {
+      console.log('Client app is running.');
+
       try {
-        console.log('Attempting to authenticate with Implicit Grant...');
-        // Authenticate client - this will redirect to login page if not already logged in
-        await clientApp.loginImplicitGrant();
-
-        console.log('Successfully authenticated.');
-
-        // Fetch API tokens and make API requests
+        // Authenticate and get token
         const token = await clientApp.getAccessToken();
 
         // Populate the Queue dropdown
@@ -144,10 +138,14 @@
             console.error('Error during interaction creation:', error);
           }
         });
+
       } catch (error) {
         document.getElementById('statusMessage').innerText = `Error during initialization: ${error.message}`;
         console.error('Initialization error:', error);
       }
+    }).catch((error) => {
+      document.getElementById('statusMessage').innerText = `App run error: ${error.message}`;
+      console.error('Error running the client app:', error);
     });
   </script>
 </body>
