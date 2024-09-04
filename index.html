@@ -50,17 +50,17 @@
   <div id="statusMessage"></div>
 
   <script>
-    // Initialize Genesys Cloud Client
+    // Initialize Genesys Cloud Client using the Token Implicit Grant
     const client = new window.GenesysCloudClient({
       clientId: '35987d94-e13b-4da4-afd2-25b85bc1c3d6',  // Replace with your OAuth Client ID
-      redirectUri: 'https://github.com/gmcglynn88/ExternalWorkCreation',  // Replace with your redirect URI
-      environment: 'apps.mypurecloud.ie'     // Replace with your Genesys Cloud environment
+      redirectUri: 'https://gmcglynn88.github.io/ExternalWorkCreation/',  // Your Redirect URI
+      environment: 'mypurecloud.ie'  // Replace with your Genesys Cloud environment
     });
 
     document.addEventListener('DOMContentLoaded', async () => {
       try {
-        // Authenticate client
-        await client.login();
+        // Authenticate client - this will redirect to login page if not already logged in
+        await client.loginImplicitGrant();
 
         // Populate the Queue dropdown
         const queues = await client.get('/api/v2/routing/queues');
