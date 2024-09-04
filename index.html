@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>External Work Creation</title>
+  <!-- Include Genesys Cloud SDK -->
+  <script src="https://sdk-cdn.mypurecloud.com/javascript/genesys-cloud-client-app-sdk.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      padding: 20px;
+    }
+    label {
+      margin-top: 10px;
+      display: block;
+    }
+    select, input, button {
+      margin-top: 5px;
+      padding: 8px;
+      width: 100%;
+      max-width: 300px;
+    }
+    #statusMessage {
+      margin-top: 20px;
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <h1>External Work Creation</h1>
+
+  <!-- Queue Selection -->
+  <label for="queueSelect">Select Queue:</label>
+  <select id="queueSelect"></select>
+
+  <!-- User Selection -->
+  <label for="userSelect">Select User:</label>
+  <select id="userSelect"></select>
+
+  <!-- External Reference Input -->
+  <label for="externalReference">External Reference:</label>
+  <input type="text" id="externalReference" placeholder="Enter external reference (ID or link)">
+
+  <!-- Button to Create Proxy Interaction -->
+  <button id="createInteractionBtn">Create Proxy Interaction</button>
+
+  <!-- Status Message -->
+  <div id="statusMessage"></div>
+
+  <script>
+    // Initialize Genesys Cloud Client
+    const client = new window.GenesysCloudClient({
+      clientId: 'YOUR_OAUTH_CLIENT_ID',  // Replace with your OAuth Client ID
+      redirectUri: 'YOUR_REDIRECT_URI',  // Replace with your redirect URI
+      environment: 'mypurecloud.com'     // Replace with your Genesys Cloud environment
+    });
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        // Authenticate client
+        await client.login();
+
+        // Populate the Queue dropdown
+        const queues = await client.get('/api/v2/routing/queues');
+        const queueSelect = document.getElementById('queueSelect');
+        queues.entities.forEach(queue => {
+          const option = document.createElement('option');
+          option.value = queue.id;
+          option.text = queue.name;
+          queueSelect.add(option);
+        });
+
+        // Populate the User dropdown
+        const users = await client.get('/api/v2/users');
+        const userSelect = document.getElementById('userSelect');
+        users.entities.forEach(user => {
+          const option = document.createElement('option');
+          option.value = user.id;
+          option.text = user.name;
+          userSelect.add(option);
+        });
+
+        // Handle the Create Interaction button click
+        document.getElementById('createInteractionBtn').addEventListener('click', async () => {
+          const queueId = queueSelect.value;
+          const userId = userSelect.value;
+          const externalReference = document.getElementById('externalReference').value;
+
+          try {
+            // Create a proxy interaction
+            const interaction = await client.post('/api/v2/conversations/emails', {
+              queueId: queueId,
+              provider: 'QualityForm',
+              direction: 'INBOUND',
+              fromName: 'External Work',
+              attributes: { 'External Link': externalReference }
+            });
+
+            // Assign the interaction to the selected user
+            const conversationId = interaction.id;
+            const conversationDetails = await client.get(`/api/v2/conversations/${conversationId}`);
+            const participantId = conversationDetails.participants[1].id; // Get the agent participant ID
+            await client.post(`/api/v2/conversations/emails/${conversationId}/participants/${participantId}/replace`, {
+              userId: userId
+            });
+
+            document.getElementById('statusMessage').innerText = 'Interaction created and assigned successfully!';
+          } catch (error) {
+            document.getElementById('statusMessage').innerText = `Error: ${error.message}`;
+          }
+        });
+      } catch (error) {
+        document.getElementById('statusMessage').innerText = `Error during initialization: ${error.message}`;
+      }
+    });
+  </script>
+</body>
+</html>
