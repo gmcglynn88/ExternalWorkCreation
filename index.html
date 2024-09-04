@@ -52,15 +52,18 @@
   <script>
     // Initialize Genesys Cloud Client using the Token Implicit Grant
     const client = new window.GenesysCloudClient({
-      clientId: '35987d94-e13b-4da4-afd2-25b85bc1c3d6',  // Replace with your OAuth Client ID
+      clientId: 'YOUR_CLIENT_ID',  // Replace with your OAuth Client ID
       redirectUri: 'https://gmcglynn88.github.io/ExternalWorkCreation/',  // Your Redirect URI
       environment: 'mypurecloud.ie'  // Replace with your Genesys Cloud environment
     });
 
     document.addEventListener('DOMContentLoaded', async () => {
       try {
+        console.log('Attempting to authenticate with Implicit Grant...');
         // Authenticate client - this will redirect to login page if not already logged in
         await client.loginImplicitGrant();
+
+        console.log('Successfully authenticated.');
 
         // Populate the Queue dropdown
         const queues = await client.get('/api/v2/routing/queues');
@@ -89,6 +92,7 @@
           const externalReference = document.getElementById('externalReference').value;
 
           try {
+            console.log('Creating proxy interaction...');
             // Create a proxy interaction
             const interaction = await client.post('/api/v2/conversations/emails', {
               queueId: queueId,
@@ -97,6 +101,8 @@
               fromName: 'External Work',
               attributes: { 'External Link': externalReference }
             });
+
+            console.log('Proxy interaction created. Assigning to user...');
 
             // Assign the interaction to the selected user
             const conversationId = interaction.id;
@@ -107,12 +113,15 @@
             });
 
             document.getElementById('statusMessage').innerText = 'Interaction created and assigned successfully!';
+            console.log('Interaction successfully created and assigned.');
           } catch (error) {
             document.getElementById('statusMessage').innerText = `Error: ${error.message}`;
+            console.error('Error during interaction creation:', error);
           }
         });
       } catch (error) {
         document.getElementById('statusMessage').innerText = `Error during initialization: ${error.message}`;
+        console.error('Initialization error:', error);
       }
     });
   </script>
