@@ -50,7 +50,6 @@
   <div id="statusMessage"></div>
 
   <script>
-    // Ensure the SDK loads only in Genesys Cloud environment
     window.addEventListener('load', () => {
       try {
         if (!window.purecloud || !window.purecloud.apps) {
@@ -64,8 +63,6 @@
 
         clientApp.lifecycle.bootstrapped().then(() => {
           console.log('Client app is bootstrapped.');
-
-          // Handle application logic
           initializeApp(clientApp);
         }).catch((error) => {
           console.error('App failed to bootstrap:', error);
@@ -80,9 +77,13 @@
         console.log('Client app is running.');
 
         try {
-          // Get token
+          // Get the access token
           const token = await clientApp.getAccessToken();
-          console.log('Access Token:', token); // Log the token for debugging
+          console.log('Access Token:', token);
+
+          if (!token) {
+            throw new Error('Access token not retrieved. Ensure OAuth settings are correct.');
+          }
 
           // Fetch data and populate dropdowns
           populateDropdowns(token);
@@ -94,6 +95,7 @@
 
         } catch (error) {
           console.error('Error obtaining access token:', error);
+          document.getElementById('statusMessage').innerText = `Error obtaining access token: ${error.message}`;
         }
       }).catch((error) => {
         console.error('Error running the client app:', error);
@@ -153,7 +155,6 @@
 
       try {
         console.log('Creating proxy interaction...');
-        // Create a proxy interaction
         const interactionResponse = await fetch('https://api.mypurecloud.ie/api/v2/conversations/emails', {
           method: 'POST',
           headers: {
