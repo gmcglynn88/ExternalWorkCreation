@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>External Work Creation</title>
-  <!-- Include Genesys Cloud SDK from the Dublin environment -->
+  <!-- Include Genesys Cloud SDK from the correct environment -->
   <script src="https://sdk-cdn.mypurecloud.ie/javascript/genesys-cloud-client-app-sdk.min.js"></script>
   <style>
     body {
@@ -30,7 +30,7 @@
 </head>
 <body>
   <h1>External Work Creation</h1>
-  
+
   <!-- Queue Selection -->
   <label for="queueSelect">Select Queue:</label>
   <select id="queueSelect"></select>
@@ -61,7 +61,6 @@
         });
 
         clientApp.lifecycle.bootstrapped().then(() => {
-          console.log('Client app is bootstrapped.');
           initializeApp(clientApp);
         }).catch((error) => {
           console.error('App failed to bootstrap:', error);
@@ -74,16 +73,8 @@
 
     function initializeApp(clientApp) {
       clientApp.run().then(async () => {
-        console.log('Client app is running.');
-
         try {
           const token = await clientApp.getAccessToken();
-          console.log('Access Token:', token);
-
-          if (!token) {
-            throw new Error('Access token not retrieved. Ensure OAuth settings are correct.');
-          }
-
           populateDropdowns(token);
 
           document.getElementById('createInteractionBtn').addEventListener('click', () => {
@@ -101,15 +92,9 @@
 
     async function populateDropdowns(token) {
       try {
-        console.log('Fetching queues and users data...');
-
-        // Fetch Queues
         const queuesResponse = await fetch('https://api.mypurecloud.ie/api/v2/routing/queues', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (!queuesResponse.ok) {
-          throw new Error(`Error fetching queues: ${queuesResponse.status} ${queuesResponse.statusText}`);
-        }
         const queues = await queuesResponse.json();
         const queueSelect = document.getElementById('queueSelect');
         queues.entities.forEach(queue => {
@@ -119,15 +104,9 @@
           queueSelect.add(option);
         });
 
-        console.log('Queues fetched successfully:', queues.entities);
-
-        // Fetch Users
         const usersResponse = await fetch('https://api.mypurecloud.ie/api/v2/users', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (!usersResponse.ok) {
-          throw new Error(`Error fetching users: ${usersResponse.status} ${usersResponse.statusText}`);
-        }
         const users = await usersResponse.json();
         const userSelect = document.getElementById('userSelect');
         users.entities.forEach(user => {
@@ -136,8 +115,6 @@
           option.text = user.name;
           userSelect.add(option);
         });
-
-        console.log('Users fetched successfully:', users.entities);
 
       } catch (error) {
         console.error('Error populating dropdowns:', error);
@@ -151,7 +128,6 @@
       const externalReference = document.getElementById('externalReference').value;
 
       try {
-        console.log('Creating proxy interaction...');
         const interactionResponse = await fetch('https://api.mypurecloud.ie/api/v2/conversations/emails', {
           method: 'POST',
           headers: {
@@ -167,24 +143,14 @@
           })
         });
 
-        if (!interactionResponse.ok) {
-          throw new Error(`Error creating interaction: ${interactionResponse.status} ${interactionResponse.statusText}`);
-        }
-
         const interaction = await interactionResponse.json();
-        console.log('Proxy interaction created:', interaction);
-
         const conversationId = interaction.id;
         const conversationDetailsResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (!conversationDetailsResponse.ok) {
-          throw new Error(`Error fetching conversation details: ${conversationDetailsResponse.status} ${conversationDetailsResponse.statusText}`);
-        }
         const conversationDetails = await conversationDetailsResponse.json();
         const participantId = conversationDetails.participants[1].id;
 
-        console.log('Assigning to user...');
         const assignResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}/participants/${participantId}/replace`, {
           method: 'POST',
           headers: {
@@ -194,13 +160,6 @@
           body: JSON.stringify({ userId: userId })
         });
 
-        if (!assignResponse.ok) {
-          throw new Error(`Error assigning user: ${assignResponse.status} ${assignResponse.statusText}`);
-        }
-
-        console.log('User assigned successfully.');
-
-        console.log('Disconnecting conversation...');
         const disconnectResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}`, {
           method: 'PATCH',
           headers: {
@@ -210,12 +169,7 @@
           body: JSON.stringify({ state: 'disconnected' })
         });
 
-        if (!disconnectResponse.ok) {
-          throw new Error(`Error disconnecting conversation: ${disconnectResponse.status} ${disconnectResponse.statusText}`);
-        }
-
         document.getElementById('statusMessage').innerText = 'Interaction created and assigned successfully!';
-        console.log('Interaction successfully created, assigned, and disconnected.');
 
       } catch (error) {
         console.error('Error during interaction creation:', error);
