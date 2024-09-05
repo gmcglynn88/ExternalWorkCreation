@@ -4,20 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>External Work Creation</title>
-  <!-- Load Genesys Cloud SDK dynamically -->
-  <script>
-    const script = document.createElement('script');
-    script.src = "https://sdk-cdn.mypurecloud.ie/javascript/genesys-cloud-client-app-sdk.min.js";
-    script.onload = function() {
-      console.log("Genesys Cloud Client App SDK loaded successfully.");
-      initializeApp();  // Initialize the app after SDK is loaded
-    };
-    script.onerror = function() {
-      console.error("Failed to load the Genesys Cloud Client App SDK.");
-      document.getElementById('statusMessage').innerText = 'Failed to load the Genesys Cloud Client App SDK.';
-    };
-    document.head.appendChild(script);
-  </script>
+  <!-- Include Genesys Cloud SDK from the Dublin environment -->
+  <script src="https://sdk-cdn.mypurecloud.ie/javascript/genesys-cloud-client-app-sdk.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -42,7 +30,7 @@
 </head>
 <body>
   <h1>External Work Creation</h1>
-
+  
   <!-- Queue Selection -->
   <label for="queueSelect">Select Queue:</label>
   <select id="queueSelect"></select>
@@ -62,39 +50,33 @@
   <div id="statusMessage"></div>
 
   <script>
-    function initializeApp() {
-      document.addEventListener('DOMContentLoaded', () => {
-        try {
-          // Check if the Genesys Cloud SDK is loaded correctly
-          if (!window.purecloud || !window.purecloud.apps) {
-            throw new Error('Genesys Cloud Client App SDK not loaded properly or is missing.');
-          }
-
-          // Initialize Genesys Cloud Client App using the JavaScript SDK
-          const clientApp = new window.purecloud.apps.ClientApp({
-            pcEnvironment: 'mypurecloud.ie'  // Your specific Genesys Cloud environment
-          });
-
-          // Authenticate using the Implicit Grant flow
-          clientApp.lifecycle.bootstrapped().then(() => {
-            console.log('Client app is bootstrapped.');
-            runApp(clientApp);
-          }).catch((error) => {
-            console.error('App failed to bootstrap:', error);
-          });
-        } catch (error) {
-          console.error('SDK Load Error:', error);
-          document.getElementById('statusMessage').innerText = `SDK Load Error: ${error.message}`;
+    document.addEventListener('DOMContentLoaded', () => {
+      try {
+        if (!window.purecloud || !window.purecloud.apps) {
+          throw new Error('Genesys Cloud Client App SDK not loaded properly or is missing.');
         }
-      });
-    }
 
-    function runApp(clientApp) {
+        const clientApp = new window.purecloud.apps.ClientApp({
+          pcEnvironment: 'mypurecloud.ie'
+        });
+
+        clientApp.lifecycle.bootstrapped().then(() => {
+          console.log('Client app is bootstrapped.');
+          initializeApp(clientApp);
+        }).catch((error) => {
+          console.error('App failed to bootstrap:', error);
+        });
+      } catch (error) {
+        console.error('SDK Load Error:', error);
+        document.getElementById('statusMessage').innerText = `SDK Load Error: ${error.message}`;
+      }
+    });
+
+    function initializeApp(clientApp) {
       clientApp.run().then(async () => {
         console.log('Client app is running.');
 
         try {
-          // Get the access token using Implicit Grant
           const token = await clientApp.getAccessToken();
           console.log('Access Token:', token);
 
@@ -102,10 +84,8 @@
             throw new Error('Access token not retrieved. Ensure OAuth settings are correct.');
           }
 
-          // Populate dropdowns
           populateDropdowns(token);
 
-          // Handle button click
           document.getElementById('createInteractionBtn').addEventListener('click', () => {
             createInteraction(token);
           });
