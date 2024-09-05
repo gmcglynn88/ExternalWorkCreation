@@ -173,6 +173,20 @@
           throw new Error(`Error assigning user: ${assignResponse.status} ${assignResponse.statusText}`);
         }
 
+        // Explicitly disconnect the participant
+        const disconnectParticipantResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}/participants/${participantId}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ state: 'disconnected' })
+        });
+
+        if (!disconnectParticipantResponse.ok) {
+          throw new Error(`Error disconnecting participant: ${disconnectParticipantResponse.status} ${disconnectParticipantResponse.statusText}`);
+        }
+
         // Disconnect conversation
         const disconnectResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}`, {
           method: 'PATCH',
@@ -187,7 +201,7 @@
           throw new Error(`Error disconnecting conversation: ${disconnectResponse.status} ${disconnectResponse.statusText}`);
         }
 
-        document.getElementById('statusMessage').innerText = 'Interaction created and assigned successfully!';
+        document.getElementById('statusMessage').innerText = 'Interaction created, assigned, and disconnected successfully!';
 
       } catch (error) {
         console.error('Error during interaction creation:', error);
