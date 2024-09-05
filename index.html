@@ -8,14 +8,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Proxima+Nova&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: 'Proxima Nova', Arial, sans-serif; /* Use Proxima Nova font */
+      font-family: 'Proxima Nova', Arial, sans-serif;
       margin: 20px;
       padding: 20px;
     }
     label {
       margin-top: 10px;
       display: block;
-      font-weight: bold; /* Make labels bold */
+      font-weight: bold;
     }
     select, input, button {
       margin-top: 5px;
@@ -42,7 +42,7 @@
 
   <!-- External Reference Input -->
   <label for="externalReference">External Reference:</label>
-  <input type="text" id="externalReference" placeholder="Enter external reference (Optional)">
+  <input type="text" id="externalReference" placeholder="Enter external reference (optional)">
 
   <!-- Button to Create Proxy Interaction -->
   <button id="createInteractionBtn">Create Proxy Interaction</button>
@@ -51,23 +51,19 @@
   <div id="statusMessage"></div>
 
   <script>
-    // Your Genesys Cloud Client ID
-    const clientId = '35987d94-e13b-4da4-afd2-25b85bc1c3d6'; // Replace with your Client ID
-    const redirectUri = 'https://gmcglynn88.github.io/ExternalWorkCreation/'; // Your redirect URI
+    const clientId = '35987d94-e13b-4da4-afd2-25b85bc1c3d6';
+    const redirectUri = 'https://gmcglynn88.github.io/ExternalWorkCreation/';
     const responseType = 'token';
     const oauthUrl = `https://login.mypurecloud.ie/oauth/authorize?client_id=${clientId}&response_type=${responseType}&redirect_uri=${encodeURIComponent(redirectUri)}`;
 
-    // Redirect to OAuth if token is not available
     document.addEventListener('DOMContentLoaded', () => {
-      const hash = window.location.hash.substring(1); // Remove '#'
+      const hash = window.location.hash.substring(1);
       const params = new URLSearchParams(hash);
       const token = params.get('access_token');
 
       if (!token) {
-        // Redirect to OAuth authorization page
         window.location.href = oauthUrl;
       } else {
-        // If token is available, initialize the app
         initializeApp(token);
       }
     });
@@ -82,32 +78,19 @@
 
     async function populateDropdowns(token) {
       try {
-        // Fetch Queues
-        const queuesResponse = await fetch('https://api.mypurecloud.ie/api/v2/routing/queues', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!queuesResponse.ok) {
-          throw new Error(`Error fetching queues: ${queuesResponse.status} ${queuesResponse.statusText}`);
-        }
-        const queues = await queuesResponse.json();
+        const queues = await fetchAllPages('https://api.mypurecloud.ie/api/v2/routing/queues', token);
+        const users = await fetchAllPages('https://api.mypurecloud.ie/api/v2/users', token);
+
         const queueSelect = document.getElementById('queueSelect');
-        queues.entities.forEach(queue => {
+        queues.forEach(queue => {
           const option = document.createElement('option');
           option.value = queue.id;
           option.text = queue.name;
           queueSelect.add(option);
         });
 
-        // Fetch Users
-        const usersResponse = await fetch('https://api.mypurecloud.ie/api/v2/users', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!usersResponse.ok) {
-          throw new Error(`Error fetching users: ${usersResponse.status} ${usersResponse.statusText}`);
-        }
-        const users = await usersResponse.json();
         const userSelect = document.getElementById('userSelect');
-        users.entities.forEach(user => {
+        users.forEach(user => {
           const option = document.createElement('option');
           option.value = user.id;
           option.text = user.name;
@@ -120,13 +103,39 @@
       }
     }
 
+    async function fetchAllPages(url, token) {
+      let allItems = [];
+      let pageNumber = 1;
+      let hasMorePages = true;
+
+      while (hasMorePages) {
+        const response = await fetch(`${url}?pageNumber=${pageNumber}&pageSize=25`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error fetching data: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        allItems = allItems.concat(data.entities);
+
+        if (data.pageCount > pageNumber) {
+          pageNumber++;
+        } else {
+          hasMorePages = false;
+        }
+      }
+
+      return allItems;
+    }
+
     async function createInteraction(token) {
       const queueId = document.getElementById('queueSelect').value;
       const userId = document.getElementById('userSelect').value;
       const externalReference = document.getElementById('externalReference').value;
 
       try {
-        // Create a proxy interaction
         const interactionResponse = await fetch('https://api.mypurecloud.ie/api/v2/conversations/emails', {
           method: 'POST',
           headers: {
@@ -149,7 +158,6 @@
         const interaction = await interactionResponse.json();
         const conversationId = interaction.id;
 
-        // Fetch conversation details
         const conversationDetailsResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -159,7 +167,6 @@
         const conversationDetails = await conversationDetailsResponse.json();
         const participantId = conversationDetails.participants[1].id;
 
-        // Assign user to the interaction
         const assignResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}/participants/${participantId}/replace`, {
           method: 'POST',
           headers: {
@@ -173,21 +180,6 @@
           throw new Error(`Error assigning user: ${assignResponse.status} ${assignResponse.statusText}`);
         }
 
-        // Explicitly disconnect the participant
-        const disconnectParticipantResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}/participants/${participantId}`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ state: 'disconnected' })
-        });
-
-        if (!disconnectParticipantResponse.ok) {
-          throw new Error(`Error disconnecting participant: ${disconnectParticipantResponse.status} ${disconnectParticipantResponse.statusText}`);
-        }
-
-        // Disconnect conversation
         const disconnectResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}`, {
           method: 'PATCH',
           headers: {
@@ -201,7 +193,7 @@
           throw new Error(`Error disconnecting conversation: ${disconnectResponse.status} ${disconnectResponse.statusText}`);
         }
 
-        document.getElementById('statusMessage').innerText = 'Interaction created, assigned, and disconnected successfully!';
+        document.getElementById('statusMessage').innerText = 'Interaction created and assigned successfully!';
 
       } catch (error) {
         console.error('Error during interaction creation:', error);
