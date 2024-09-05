@@ -25,7 +25,7 @@
     }
     #statusMessage {
       margin-top: 20px;
-      color: green;
+      color: red;
     }
   </style>
 </head>
@@ -173,18 +173,32 @@
           throw new Error(`Error assigning user: ${assignResponse.status} ${assignResponse.statusText}`);
         }
 
-        // Set the external tag and disconnect the conversation in the same request
+        // Set the external tag in a separate PATCH request
+        const tagResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ externalTag: externalReference })
+        });
+
+        if (!tagResponse.ok) {
+          throw new Error(`Error setting external tag: ${tagResponse.status} ${tagResponse.statusText}`);
+        }
+
+        // Disconnect conversation
         const disconnectResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}`, {
           method: 'PATCH',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ state: 'disconnected', externalTag: externalReference })
+          body: JSON.stringify({ state: 'disconnected' })
         });
 
         if (!disconnectResponse.ok) {
-          throw new Error(`Error disconnecting conversation or setting external tag: ${disconnectResponse.status} ${disconnectResponse.statusText}`);
+          throw new Error(`Error disconnecting conversation: ${disconnectResponse.status} ${disconnectResponse.statusText}`);
         }
 
         document.getElementById('statusMessage').innerText = 'Interaction created, external tag set, and disconnected successfully!';
