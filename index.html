@@ -25,7 +25,7 @@
     }
     #statusMessage {
       margin-top: 20px;
-      color: red;
+      color: green;
     }
   </style>
 </head>
@@ -126,7 +126,7 @@
       const externalReference = document.getElementById('externalReference').value;
 
       try {
-        // Create a proxy interaction
+        // Create a proxy interaction with externalTag
         const interactionResponse = await fetch('https://api.mypurecloud.ie/api/v2/conversations/emails', {
           method: 'POST',
           headers: {
@@ -138,6 +138,7 @@
             provider: 'QualityForm',
             direction: 'INBOUND',
             fromName: 'External Work',
+            externalTag: externalReference, // Add externalTag here
             attributes: { 'External Link': externalReference }
           })
         });
@@ -173,20 +174,6 @@
           throw new Error(`Error assigning user: ${assignResponse.status} ${assignResponse.statusText}`);
         }
 
-        // Set the external tag in a separate PATCH request
-        const tagResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ externalTag: externalReference })
-        });
-
-        if (!tagResponse.ok) {
-          throw new Error(`Error setting external tag: ${tagResponse.status} ${tagResponse.statusText}`);
-        }
-
         // Disconnect conversation
         const disconnectResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}`, {
           method: 'PATCH',
@@ -201,7 +188,7 @@
           throw new Error(`Error disconnecting conversation: ${disconnectResponse.status} ${disconnectResponse.statusText}`);
         }
 
-        document.getElementById('statusMessage').innerText = 'Interaction created, external tag set, and disconnected successfully!';
+        document.getElementById('statusMessage').innerText = 'Interaction created, tagged, and disconnected successfully!';
 
       } catch (error) {
         console.error('Error during interaction creation:', error);
