@@ -52,6 +52,11 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       try {
+        // Check if the Genesys Cloud SDK is loaded correctly
+        if (!window.purecloud || !window.purecloud.apps) {
+          throw new Error('Genesys Cloud Client App SDK not loaded properly or is missing.');
+        }
+
         // Initialize Genesys Cloud Client App using the JavaScript SDK
         const clientApp = new window.purecloud.apps.ClientApp({
           pcEnvironment: 'mypurecloud.ie'  // Your specific Genesys Cloud environment
@@ -66,6 +71,7 @@
         });
       } catch (error) {
         console.error('SDK Load Error:', error);
+        document.getElementById('statusMessage').innerText = `SDK Load Error: ${error.message}`;
       }
     });
 
