@@ -173,21 +173,21 @@
           throw new Error(`Error assigning user: ${assignResponse.status} ${assignResponse.statusText}`);
         }
 
-        // Disconnect conversation
+        // Disconnect conversation with externalTag
         const disconnectResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}`, {
           method: 'PATCH',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ state: 'disconnected' })
+          body: JSON.stringify({ state: 'disconnected', externalTag: externalReference })
         });
 
         if (!disconnectResponse.ok) {
           throw new Error(`Error disconnecting conversation: ${disconnectResponse.status} ${disconnectResponse.statusText}`);
         }
 
-        document.getElementById('statusMessage').innerText = 'Interaction created and assigned successfully!';
+        document.getElementById('statusMessage').innerText = 'Interaction created, assigned, and disconnected successfully with external tag!';
 
       } catch (error) {
         console.error('Error during interaction creation:', error);
