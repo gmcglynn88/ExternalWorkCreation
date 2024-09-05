@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>External Work Creation</title>
-  <!-- Include Genesys Cloud SDK from the correct environment -->
-  <script src="https://sdk-cdn.mypurecloud.ie/javascript/genesys-cloud-client-app-sdk.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -50,51 +48,44 @@
   <div id="statusMessage"></div>
 
   <script>
+    // Your Genesys Cloud Client ID
+    const clientId = 'YOUR_CLIENT_ID'; // Replace with your Client ID
+    const redirectUri = 'https://gmcglynn88.github.io/ExternalWorkCreation/'; // Your redirect URI
+    const responseType = 'token';
+    const oauthUrl = `https://login.mypurecloud.ie/oauth/authorize?client_id=${clientId}&response_type=${responseType}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+
+    // Redirect to OAuth if token is not available
     document.addEventListener('DOMContentLoaded', () => {
-      try {
-        if (!window.purecloud || !window.purecloud.apps) {
-          throw new Error('Genesys Cloud Client App SDK not loaded properly or is missing.');
-        }
+      const hash = window.location.hash.substring(1); // Remove '#'
+      const params = new URLSearchParams(hash);
+      const token = params.get('access_token');
 
-        const clientApp = new window.purecloud.apps.ClientApp({
-          pcEnvironment: 'mypurecloud.ie'
-        });
-
-        clientApp.lifecycle.bootstrapped().then(() => {
-          initializeApp(clientApp);
-        }).catch((error) => {
-          console.error('App failed to bootstrap:', error);
-        });
-      } catch (error) {
-        console.error('SDK Load Error:', error);
-        document.getElementById('statusMessage').innerText = `SDK Load Error: ${error.message}`;
+      if (!token) {
+        // Redirect to OAuth authorization page
+        window.location.href = oauthUrl;
+      } else {
+        // If token is available, initialize the app
+        initializeApp(token);
       }
     });
 
-    function initializeApp(clientApp) {
-      clientApp.run().then(async () => {
-        try {
-          const token = await clientApp.getAccessToken();
-          populateDropdowns(token);
+    function initializeApp(token) {
+      populateDropdowns(token);
 
-          document.getElementById('createInteractionBtn').addEventListener('click', () => {
-            createInteraction(token);
-          });
-
-        } catch (error) {
-          console.error('Error obtaining access token:', error);
-          document.getElementById('statusMessage').innerText = `Error obtaining access token: ${error.message}`;
-        }
-      }).catch((error) => {
-        console.error('Error running the client app:', error);
+      document.getElementById('createInteractionBtn').addEventListener('click', () => {
+        createInteraction(token);
       });
     }
 
     async function populateDropdowns(token) {
       try {
+        // Fetch Queues
         const queuesResponse = await fetch('https://api.mypurecloud.ie/api/v2/routing/queues', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
+        if (!queuesResponse.ok) {
+          throw new Error(`Error fetching queues: ${queuesResponse.status} ${queuesResponse.statusText}`);
+        }
         const queues = await queuesResponse.json();
         const queueSelect = document.getElementById('queueSelect');
         queues.entities.forEach(queue => {
@@ -104,9 +95,13 @@
           queueSelect.add(option);
         });
 
+        // Fetch Users
         const usersResponse = await fetch('https://api.mypurecloud.ie/api/v2/users', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
+        if (!usersResponse.ok) {
+          throw new Error(`Error fetching users: ${usersResponse.status} ${usersResponse.statusText}`);
+        }
         const users = await usersResponse.json();
         const userSelect = document.getElementById('userSelect');
         users.entities.forEach(user => {
@@ -128,6 +123,7 @@
       const externalReference = document.getElementById('externalReference').value;
 
       try {
+        // Create a proxy interaction
         const interactionResponse = await fetch('https://api.mypurecloud.ie/api/v2/conversations/emails', {
           method: 'POST',
           headers: {
@@ -143,14 +139,24 @@
           })
         });
 
+        if (!interactionResponse.ok) {
+          throw new Error(`Error creating interaction: ${interactionResponse.status} ${interactionResponse.statusText}`);
+        }
+
         const interaction = await interactionResponse.json();
         const conversationId = interaction.id;
+
+        // Fetch conversation details
         const conversationDetailsResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
+        if (!conversationDetailsResponse.ok) {
+          throw new Error(`Error fetching conversation details: ${conversationDetailsResponse.status} ${conversationDetailsResponse.statusText}`);
+        }
         const conversationDetails = await conversationDetailsResponse.json();
         const participantId = conversationDetails.participants[1].id;
 
+        // Assign user to the interaction
         const assignResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}/participants/${participantId}/replace`, {
           method: 'POST',
           headers: {
@@ -160,6 +166,11 @@
           body: JSON.stringify({ userId: userId })
         });
 
+        if (!assignResponse.ok) {
+          throw new Error(`Error assigning user: ${assignResponse.status} ${assignResponse.statusText}`);
+        }
+
+        // Disconnect conversation
         const disconnectResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}`, {
           method: 'PATCH',
           headers: {
@@ -168,6 +179,10 @@
           },
           body: JSON.stringify({ state: 'disconnected' })
         });
+
+        if (!disconnectResponse.ok) {
+          throw new Error(`Error disconnecting conversation: ${disconnectResponse.status} ${disconnectResponse.statusText}`);
+        }
 
         document.getElementById('statusMessage').innerText = 'Interaction created and assigned successfully!';
 
