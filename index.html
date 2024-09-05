@@ -13,10 +13,22 @@
       padding: 20px;
       text-align: center; /* Center the content horizontally */
     }
+    #logo-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    #logo {
+      width: 180px; /* Increase the size to make it more prominent */
+    }
     label {
       margin-top: 10px;
       display: block;
       font-weight: bold;
+      text-align: left; /* Aligns the labels to the left */
+      max-width: 300px;
+      margin: 0 auto; /* Centers the labels */
     }
     select, input, button {
       margin-top: 5px;
@@ -28,15 +40,13 @@
       margin-top: 20px;
       color: green;
     }
-    #logo {
-      max-width: 300px; /* Increased size by 15% (150px * 1.15) */
-      margin-bottom: 20px; /* Adds some space below the logo */
-    }
   </style>
 </head>
 <body>
-  <!-- Logo at the top -->
-  <img id="logo" src="https://raw.githubusercontent.com/gmcglynn88/ExternalWorkCreation/main/Consultinglogo.png" alt="Company Logo">
+  <!-- Centered Logo at the top -->
+  <div id="logo-container">
+    <img id="logo" src="https://raw.githubusercontent.com/gmcglynn88/ExternalWorkCreation/main/Consultinglogo.png" alt="Company Logo">
+  </div>
 
   <h1>External Work Creation</h1>
 
