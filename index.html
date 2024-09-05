@@ -25,7 +25,7 @@
     }
     #statusMessage {
       margin-top: 20px;
-      color: green;
+      color: red;
     }
   </style>
 </head>
@@ -126,7 +126,7 @@
       const externalReference = document.getElementById('externalReference').value;
 
       try {
-        // Create a proxy interaction with externalTag
+        // Create a proxy interaction
         const interactionResponse = await fetch('https://api.mypurecloud.ie/api/v2/conversations/emails', {
           method: 'POST',
           headers: {
@@ -138,7 +138,6 @@
             provider: 'QualityForm',
             direction: 'INBOUND',
             fromName: 'External Work',
-            externalTag: externalReference, // Add externalTag here
             attributes: { 'External Link': externalReference }
           })
         });
@@ -188,7 +187,7 @@
           throw new Error(`Error disconnecting conversation: ${disconnectResponse.status} ${disconnectResponse.statusText}`);
         }
 
-        document.getElementById('statusMessage').innerText = 'Interaction created, tagged, and disconnected successfully!';
+        document.getElementById('statusMessage').innerText = 'Interaction created and assigned successfully!';
 
       } catch (error) {
         console.error('Error during interaction creation:', error);
