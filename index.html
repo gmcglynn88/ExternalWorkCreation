@@ -4,40 +4,71 @@ async function createInteraction(token) {
   const externalReference = document.getElementById('externalReference').value;
   const mediaType = document.getElementById('mediaTypeSelect').value; // Get selected media type
 
-  // Determine API endpoint based on the selected media type
+  // Determine API endpoint and payload based on the selected media type
   let apiEndpoint = '';
+  let payload = {};
+
   switch (mediaType) {
     case 'voice':
       apiEndpoint = 'https://api.mypurecloud.ie/api/v2/conversations/calls';
+      payload = {
+        queueId: queueId,
+        provider: 'External Work',
+        direction: 'INBOUND',
+        fromAddress: 'external_work@provider.com',
+        toAddress: 'external_queue@provider.com',
+        attributes: { 'External Link': externalReference }
+      };
       break;
+
     case 'email':
       apiEndpoint = 'https://api.mypurecloud.ie/api/v2/conversations/emails';
+      payload = {
+        queueId: queueId,
+        provider: 'QualityForm',
+        direction: 'INBOUND',
+        fromName: 'External Work',
+        attributes: { 'External Link': externalReference }
+      };
       break;
+
     case 'message':
       apiEndpoint = 'https://api.mypurecloud.ie/api/v2/conversations/messages';
+      payload = {
+        queueId: queueId,
+        provider: 'ExternalWorkMessaging',
+        direction: 'INBOUND',
+        toAddress: 'external_queue@provider.com',
+        fromAddress: 'external_work@provider.com',
+        attributes: { 'External Link': externalReference }
+      };
       break;
+
     case 'chat':
       apiEndpoint = 'https://api.mypurecloud.ie/api/v2/conversations/chats';
+      payload = {
+        queueId: queueId,
+        provider: 'ExternalWorkChat',
+        direction: 'INBOUND',
+        roomId: 'chat_room_id', // Assuming this would need to be provided
+        attributes: { 'External Link': externalReference }
+      };
       break;
+
     default:
       console.error('Invalid media type selected');
       return;
   }
 
   try {
+    // Make API call to create interaction
     const interactionResponse = await fetch(apiEndpoint, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        queueId: queueId,
-        provider: 'QualityForm',
-        direction: 'INBOUND',
-        fromName: 'External Work',
-        attributes: { 'External Link': externalReference }
-      })
+      body: JSON.stringify(payload)
     });
 
     if (!interactionResponse.ok) {
@@ -47,15 +78,19 @@ async function createInteraction(token) {
     const interaction = await interactionResponse.json();
     const conversationId = interaction.id;
 
+    // Fetch conversation details
     const conversationDetailsResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
+
     if (!conversationDetailsResponse.ok) {
       throw new Error(`Error fetching conversation details: ${conversationDetailsResponse.status} ${conversationDetailsResponse.statusText}`);
     }
+
     const conversationDetails = await conversationDetailsResponse.json();
     const participantId = conversationDetails.participants[1].id;
 
+    // Assign user to the conversation
     const assignResponse = await fetch(`${apiEndpoint}/${conversationId}/participants/${participantId}/replace`, {
       method: 'POST',
       headers: {
@@ -69,6 +104,7 @@ async function createInteraction(token) {
       throw new Error(`Error assigning user: ${assignResponse.status} ${assignResponse.statusText}`);
     }
 
+    // Disconnect the conversation
     const disconnectResponse = await fetch(`${apiEndpoint}/${conversationId}`, {
       method: 'PATCH',
       headers: {
@@ -82,6 +118,7 @@ async function createInteraction(token) {
       throw new Error(`Error disconnecting conversation: ${disconnectResponse.status} ${disconnectResponse.statusText}`);
     }
 
+    // Display success message
     document.getElementById('statusMessage').innerText = 'Interaction created and assigned successfully!';
 
   } catch (error) {
