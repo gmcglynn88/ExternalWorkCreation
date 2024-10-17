@@ -163,30 +163,22 @@
         case 'voice':
           apiEndpoint = 'https://api.mypurecloud.ie/api/v2/conversations/calls';
           payload = {
-            phoneNumber: 'external_phone_number',  // Placeholder, you can replace with actual phone number
-            callerId: 'caller_id_value',  // Placeholder, replace with actual caller ID
-            callerIdName: 'External Work Caller',
-            callFromQueueId: queueId,
-            callQueueId: queueId,
-            callUserId: userId,
+            queueId: queueId,
+            provider: 'QualityForm',
+            direction: 'INBOUND',
+            fromName: 'External Work Caller',
             priority: 0,
             attributes: {
               'External Link': externalReference
             },
-            languageId: '',
-            routingSkillsIds: [],
-            conversationIds: [],
             participants: [
               {
                 address: 'external_work@provider.com', // Placeholder
-                name: 'External Work',
+                name: 'External Work Caller',
                 userId: userId,
                 queueId: queueId
               }
-            ],
-            uuiData: '',
-            externalContactId: '',
-            label: 'External Work Call'
+            ]
           };
           break;
 
