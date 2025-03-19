@@ -52,9 +52,9 @@
   <label for="userSelect">Select User:</label>
   <select id="userSelect"></select>
 
-  <!-- External Reference Input -->
-  <label for="externalReference">External Reference:</label>
-  <input type="text" id="externalReference" placeholder="Enter external reference (optional)">
+  <!-- External Tag Input -->
+  <label for="externalReference">External Tag:</label>
+  <input type="text" id="externalReference" placeholder="Enter external tag (optional)">
 
   <!-- Button to Create Proxy Interaction -->
   <button id="createInteractionBtn">Create Proxy Interaction</button>
@@ -159,7 +159,7 @@
             provider: 'QualityForm',
             direction: 'INBOUND',
             fromName: 'External Work',
-            attributes: { 'External Link': externalReference }
+            attributes: { 'External Tag': externalReference } // Changed to 'External Tag'
           })
         });
 
