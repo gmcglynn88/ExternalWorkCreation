@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Activity Code Management</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>External Work Creation</title>
+  <!-- Include the Proxima Nova font -->
   <link href="https://fonts.googleapis.com/css2?family=Proxima+Nova&display=swap" rel="stylesheet">
   <style>
     body {
@@ -12,366 +13,203 @@
       padding: 20px;
     }
     #logo-container {
-      text-align: center;
+      text-align: center; /* Center the logo container */
       margin-bottom: 20px;
     }
     #logo {
-      width: 300px;
-    }
-    h1 {
-      font-size: 24px;
-    }
-    label, select, input, button {
-      display: block;
-      margin: 10px 0;
+      width: 300px; /* Increase the size by another 15% */
     }
     label {
+      margin-top: 10px;
+      display: block;
       font-weight: bold;
     }
     select, input, button {
-      margin-top: 10px;
-      padding: 12px;
+      margin-top: 5px;
+      padding: 8px;
       width: 100%;
-      max-width: 400px;
-      font-size: 16px;
-      box-sizing: border-box;
+      max-width: 300px;
     }
-    #results {
+    #statusMessage {
       margin-top: 20px;
-    }
-    #results p {
-      font-weight: normal;
-    }
-    .checkbox-container {
-      display: flex;
-      align-items: center;
-      margin: 5px 0;
-      width: 100%;
-      max-width: 400px;
-      flex-wrap: nowrap;
-    }
-    .checkbox-container label {
-      flex-grow: 1;
-      white-space: nowrap;
-      font-weight: normal;
-      margin: 0;
-    }
-    .checkbox-container input[type="checkbox"] {
-      margin-right: 10px;
-      width: auto;
-    }
-    select[multiple] {
-      height: auto;
-      min-height: 120px;
-    }
-    button {
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background-color 0.3s;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-    .error {
-      color: #dc3545;
-    }
-    .success {
-      color: #28a745;
-    }
-    #auth-message {
-      margin: 20px 0;
-      padding: 10px;
-      border-radius: 4px;
-    }
-    .auth-loading {
-      background-color: #fff3cd;
-      color: #856404;
-    }
-    .auth-error {
-      background-color: #f8d7da;
-      color: #721c24;
+      color: green;
     }
   </style>
 </head>
 <body>
-
+  <!-- Centered Logo at the top -->
   <div id="logo-container">
-    <img
-      id="logo"
-      src="https://raw.githubusercontent.com/gmcglynn88/Management-Unit-Search/main/Consultinglogo%20(2).png"
-      alt="Company Logo"
-    >
+    <img id="logo" src="https://raw.githubusercontent.com/gmcglynn88/ExternalWorkCreation/main/Consultinglogo.png" alt="Company Logo">
   </div>
 
-  <h1>Manage Business Units and Activity Codes</h1>
+  <h1>External Work Creation</h1>
 
-  <div id="auth-message" class="auth-loading">Authenticating with PureCloud...</div>
+  <!-- Queue Selection -->
+  <label for="queueSelect">Select Queue:</label>
+  <select id="queueSelect"></select>
 
-  <!-- Business Units Dropdown -->
-  <label for="business-units">Select Business Units:</label>
-  <select id="business-units" multiple disabled>
-    <!-- Options will be populated dynamically via JavaScript -->
-  </select>
+  <!-- User Selection -->
+  <label for="userSelect">Select User:</label>
+  <select id="userSelect"></select>
 
-  <hr>
+  <!-- External Reference Input -->
+  <label for="externalReference">External Reference:</label>
+  <input type="text" id="externalReference" placeholder="Enter external reference (optional)">
 
-  <!-- Activity Code Creation Form -->
-  <h2>Create Activity Code</h2>
+  <!-- Button to Create Proxy Interaction -->
+  <button id="createInteractionBtn">Create Proxy Interaction</button>
 
-  <label for="activity-name">Activity Name:</label>
-  <input type="text" id="activity-name" placeholder="Enter activity name" required disabled>
-
-  <label for="category">Category:</label>
-  <select id="category" required disabled>
-    <option value="">Select category</option>
-    <option value="OnQueueWork">OnQueueWork</option>
-    <option value="Break">Break</option>
-    <option value="Meal">Meal</option>
-    <option value="Meeting">Meeting</option>
-    <option value="OffQueueWork">OffQueueWork</option>
-    <option value="TimeOff">TimeOff</option>
-    <option value="Training">Training</option>
-    <option value="Unavailable">Unavailable</option>
-    <option value="Unscheduled">Unscheduled</option>
-  </select>
-
-  <label for="length">Default Length (minutes):</label>
-  <input type="number" id="length" placeholder="Enter default length" disabled>
-
-  <label>Options:</label>
-
-  <div class="checkbox-container">
-    <input type="checkbox" id="paid-time" value="countsAsPaidTime" disabled>
-    <label for="paid-time">Counts as Paid Time</label>
-  </div>
-
-  <div class="checkbox-container">
-    <input type="checkbox" id="work-time" value="countsAsWorkTime" disabled>
-    <label for="work-time">Counts as Work Time</label>
-  </div>
-
-  <div class="checkbox-container">
-    <input type="checkbox" id="time-off-selectable" value="agentTimeOffSelectable" disabled>
-    <label for="time-off-selectable">Agent Time Off Selectable</label>
-  </div>
-
-  <div class="checkbox-container">
-    <input type="checkbox" id="shrinkage" value="countsTowardShrinkage" disabled>
-    <label for="shrinkage">Counts Toward Shrinkage</label>
-  </div>
-
-  <div class="checkbox-container">
-    <input type="checkbox" id="planned-shrinkage" value="plannedShrinkage" disabled>
-    <label for="planned-shrinkage">Planned Shrinkage</label>
-  </div>
-
-  <div class="checkbox-container">
-    <input type="checkbox" id="interruptible" value="interruptible" disabled>
-    <label for="interruptible">Interruptible</label>
-  </div>
-
-  <button id="create-button" onclick="createActivityCode()" disabled>Create Activity Code for Selected Business Units</button>
-
-  <div id="results">
-    <!-- Results will be displayed here -->
-  </div>
+  <!-- Status Message -->
+  <div id="statusMessage"></div>
 
   <script>
-    // OAuth Configuration
-    const clientId = 'f93a488c-73e9-40cf-b4fd-5c05ff043c81';
-    const redirectUri = window.location.href.split('?')[0]; // Current page URL
+    const clientId = '35987d94-e13b-4da4-afd2-25b85bc1c3d6';
+    const redirectUri = 'https://gmcglynn88.github.io/ExternalWorkCreation/';
     const responseType = 'token';
-    const oauthUrl = `https://login.mypurecloud.ie/oauth/authorize?client_id=${clientId}&response_type=${responseType}&redirect_uri=${encodeURIComponent(redirectUri)}`;
-    
-    // Global token variable
-    let accessToken = null;
+    const oauthUrl = https://login.mypurecloud.ie/oauth/authorize?client_id=${clientId}&response_type=${responseType}&redirect_uri=${encodeURIComponent(redirectUri)};
 
-    // Handle page load and authentication
     document.addEventListener('DOMContentLoaded', () => {
       const hash = window.location.hash.substring(1);
       const params = new URLSearchParams(hash);
-      accessToken = params.get('access_token');
-      
-      if (accessToken) {
-        // Store token in sessionStorage for page refreshes
-        sessionStorage.setItem('purecloud_token', accessToken);
-        initializeApplication();
-      } else if (sessionStorage.getItem('purecloud_token')) {
-        // Use stored token if available
-        accessToken = sessionStorage.getItem('purecloud_token');
-        initializeApplication();
-      } else {
-        // Redirect to OAuth login
+      const token = params.get('access_token');
+
+      if (!token) {
         window.location.href = oauthUrl;
+      } else {
+        initializeApp(token);
       }
     });
 
-    function initializeApplication() {
-      document.getElementById('auth-message').textContent = 'Authenticated successfully!';
-      document.getElementById('auth-message').style.display = 'none';
-      
-      // Enable all form elements
-      document.getElementById('business-units').disabled = false;
-      document.getElementById('activity-name').disabled = false;
-      document.getElementById('category').disabled = false;
-      document.getElementById('length').disabled = false;
-      document.getElementById('paid-time').disabled = false;
-      document.getElementById('work-time').disabled = false;
-      document.getElementById('time-off-selectable').disabled = false;
-      document.getElementById('shrinkage').disabled = false;
-      document.getElementById('planned-shrinkage').disabled = false;
-      document.getElementById('interruptible').disabled = false;
-      document.getElementById('create-button').disabled = false;
-      
-      // Fetch business units
-      fetchBusinessUnits();
+    function initializeApp(token) {
+      populateDropdowns(token);
+
+      document.getElementById('createInteractionBtn').addEventListener('click', () => {
+        createInteraction(token);
+      });
     }
 
-    // Function to fetch all business units (with pagination support)
-    async function fetchBusinessUnits() {
+    async function populateDropdowns(token) {
       try {
-        const apiUrl = 'https://api.mypurecloud.ie/api/v2/workforcemanagement/businessunits?pageSize=100';
-        
-        let businessUnits = [];
-        let nextPageUrl = apiUrl;
+        const queues = await fetchAllPages('https://api.mypurecloud.ie/api/v2/routing/queues', token);
+        const users = await fetchAllPages('https://api.mypurecloud.ie/api/v2/users', token);
 
-        // Loop to handle pagination
-        while (nextPageUrl) {
-          const response = await fetch(nextPageUrl, {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'Content-Type': 'application/json'
-            },
-          });
-
-          const data = await response.json();
-
-          if (response.ok) {
-            // Concatenate current page of business units
-            businessUnits = businessUnits.concat(data.entities);
-            
-            // Get the next page URL (if available)
-            nextPageUrl = data.pageCount > data.pageNumber ? `${apiUrl}&pageNumber=${data.pageNumber + 1}` : null;
-          } else {
-            console.error('Error fetching business units:', data);
-            throw new Error(data.message || 'Error fetching business units');
-          }
-        }
-
-        // Populate the dropdown after fetching all business units
-        const businessUnitsSelect = document.getElementById('business-units');
-        businessUnits.forEach(unit => {
+        const queueSelect = document.getElementById('queueSelect');
+        queues.forEach(queue => {
           const option = document.createElement('option');
-          option.value = unit.id;
-          option.textContent = unit.name;
-          businessUnitsSelect.appendChild(option);
+          option.value = queue.id;
+          option.text = queue.name;
+          queueSelect.add(option);
         });
+
+        const userSelect = document.getElementById('userSelect');
+        users.forEach(user => {
+          const option = document.createElement('option');
+          option.value = user.id;
+          option.text = user.name;
+          userSelect.add(option);
+        });
+
       } catch (error) {
-        console.error('Error in fetchBusinessUnits:', error);
-        document.getElementById('results').innerHTML = `<p class="error">Error loading business units: ${error.message}</p>`;
-        document.getElementById('auth-message').textContent = `Error: ${error.message}`;
-        document.getElementById('auth-message').className = 'auth-error';
+        console.error('Error populating dropdowns:', error);
+        document.getElementById('statusMessage').innerText = Error loading data: ${error.message};
       }
     }
 
-    // Function to create the activity code
-    async function createActivityCode() {
-      // Clear previous results
-      const resultsDiv = document.getElementById('results');
-      resultsDiv.innerHTML = '';
-      
-      // Validate form inputs
-      const name = document.getElementById('activity-name').value.trim();
-      const category = document.getElementById('category').value;
-      const businessUnits = Array.from(document.getElementById('business-units').selectedOptions).map(option => option.value);
-      
-      if (!name) {
-        resultsDiv.innerHTML = '<p class="error">Please enter an activity name</p>';
-        return;
+    async function fetchAllPages(url, token) {
+      let allItems = [];
+      let pageNumber = 1;
+      let hasMorePages = true;
+
+      while (hasMorePages) {
+        const response = await fetch(${url}?pageNumber=${pageNumber}&pageSize=25, {
+          headers: { 'Authorization': Bearer ${token} }
+        });
+
+        if (!response.ok) {
+          throw new Error(Error fetching data: ${response.status} ${response.statusText});
+        }
+
+        const data = await response.json();
+        allItems = allItems.concat(data.entities);
+
+        if (data.pageCount > pageNumber) {
+          pageNumber++;
+        } else {
+          hasMorePages = false;
+        }
       }
-      
-      if (!category) {
-        resultsDiv.innerHTML = '<p class="error">Please select a category</p>';
-        return;
-      }
-      
-      if (businessUnits.length === 0) {
-        resultsDiv.innerHTML = '<p class="error">Please select at least one business unit</p>';
-        return;
-      }
-      
-      const lengthInMinutes = parseInt(document.getElementById('length').value, 10) || null;
-      const countsAsPaidTime = document.getElementById('paid-time').checked;
-      const countsAsWorkTime = document.getElementById('work-time').checked;
-      const agentTimeOffSelectable = document.getElementById('time-off-selectable').checked;
-      const countsTowardShrinkage = document.getElementById('shrinkage').checked;
-      const plannedShrinkage = document.getElementById('planned-shrinkage').checked;
-      const interruptible = document.getElementById('interruptible').checked;
+
+      return allItems;
+    }
+
+    async function createInteraction(token) {
+      const queueId = document.getElementById('queueSelect').value;
+      const userId = document.getElementById('userSelect').value;
+      const externalReference = document.getElementById('externalReference').value;
 
       try {
-        // Create activity code in each selected business unit
-        let successCount = 0;
-        let errorCount = 0;
-        let errorMessages = [];
-        
-        for (const businessUnitId of businessUnits) {
-          const createUrl = `https://api.mypurecloud.ie/api/v2/workforcemanagement/businessunits/${businessUnitId}/activitycodes`;
-          
-          try {
-            const response = await fetch(createUrl, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                name,
-                category,
-                lengthInMinutes,
-                countsAsPaidTime,
-                countsAsWorkTime,
-                agentTimeOffSelectable,
-                countsTowardShrinkage,
-                plannedShrinkage,
-                interruptible
-              }),
-            });
-            
-            const data = await response.json();
-            
-            if (response.ok) {
-              console.log(`Activity code created in ${businessUnitId}:`, data);
-              successCount++;
-            } else {
-              console.error(`Error creating activity code in ${businessUnitId}:`, data);
-              errorCount++;
-              errorMessages.push(`Business Unit ${businessUnitId}: ${data.message || 'Unknown error'}`);
-            }
-          } catch (error) {
-            console.error(`Error creating activity code in ${businessUnitId}:`, error);
-            errorCount++;
-            errorMessages.push(`Business Unit ${businessUnitId}: ${error.message}`);
-          }
+        const interactionResponse = await fetch('https://api.mypurecloud.ie/api/v2/conversations/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': Bearer ${token},
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            queueId: queueId,
+            provider: 'QualityForm',
+            direction: 'INBOUND',
+            fromName: 'External Work',
+            attributes: { 'External Link': externalReference }
+          })
+        });
+
+        if (!interactionResponse.ok) {
+          throw new Error(Error creating interaction: ${interactionResponse.status} ${interactionResponse.statusText});
         }
-        
-        // Display results
-        if (errorCount === 0) {
-          resultsDiv.innerHTML = `<p class="success">Activity code created successfully in all ${successCount} business units.</p>`;
-        } else if (successCount === 0) {
-          resultsDiv.innerHTML = `<p class="error">Failed to create activity code in all business units.</p>
-                                 <ul>${errorMessages.map(msg => `<li>${msg}</li>`).join('')}</ul>`;
-        } else {
-          resultsDiv.innerHTML = `<p class="success">Activity code created successfully in ${successCount} business units.</p>
-                                 <p class="error">Failed to create in ${errorCount} business units:</p>
-                                 <ul>${errorMessages.map(msg => `<li>${msg}</li>`).join('')}</ul>`;
+
+        const interaction = await interactionResponse.json();
+        const conversationId = interaction.id;
+
+        const conversationDetailsResponse = await fetch(https://api.mypurecloud.ie/api/v2/conversations/${conversationId}, {
+          headers: { 'Authorization': Bearer ${token} }
+        });
+        if (!conversationDetailsResponse.ok) {
+          throw new Error(Error fetching conversation details: ${conversationDetailsResponse.status} ${conversationDetailsResponse.statusText});
         }
+        const conversationDetails = await conversationDetailsResponse.json();
+        const participantId = conversationDetails.participants[1].id;
+
+        const assignResponse = await fetch(https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}/participants/${participantId}/replace, {
+          method: 'POST',
+          headers: {
+            'Authorization': Bearer ${token},
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ userId: userId })
+        });
+
+        if (!assignResponse.ok) {
+          throw new Error(Error assigning user: ${assignResponse.status} ${assignResponse.statusText});
+        }
+
+        const disconnectResponse = await fetch(https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': Bearer ${token},
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ state: 'disconnected' })
+        });
+
+        if (!disconnectResponse.ok) {
+          throw new Error(Error disconnecting conversation: ${disconnectResponse.status} ${disconnectResponse.statusText});
+        }
+
+        document.getElementById('statusMessage').innerText = 'Interaction created and assigned successfully!';
+
       } catch (error) {
-        console.error('Error in createActivityCode:', error);
-        resultsDiv.innerHTML = `<p class="error">Error creating activity code: ${error.message}</p>`;
+        console.error('Error during interaction creation:', error);
+        document.getElementById('statusMessage').innerText = Error: ${error.message};
       }
     }
   </script>
