@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>External Work Creation</title>
-  <!-- Include the Proxima Nova font -->
   <link href="https://fonts.googleapis.com/css2?family=Proxima+Nova&display=swap" rel="stylesheet">
   <style>
     body {
@@ -13,11 +12,11 @@
       padding: 20px;
     }
     #logo-container {
-      text-align: center; /* Center the logo container */
+      text-align: center;
       margin-bottom: 20px;
     }
     #logo {
-      width: 300px; /* Increase the size by another 15% */
+      width: 300px;
     }
     label {
       margin-top: 10px;
@@ -37,36 +36,30 @@
   </style>
 </head>
 <body>
-  <!-- Centered Logo at the top -->
   <div id="logo-container">
     <img id="logo" src="https://raw.githubusercontent.com/gmcglynn88/ExternalWorkCreation/main/Consultinglogo.png" alt="Company Logo">
   </div>
 
   <h1>External Work Creation</h1>
 
-  <!-- Queue Selection -->
   <label for="queueSelect">Select Queue:</label>
   <select id="queueSelect"></select>
 
-  <!-- User Selection -->
   <label for="userSelect">Select User:</label>
   <select id="userSelect"></select>
 
-  <!-- External Reference Input -->
   <label for="externalReference">External Reference:</label>
   <input type="text" id="externalReference" placeholder="Enter external reference (optional)">
 
-  <!-- Button to Create Proxy Interaction -->
   <button id="createInteractionBtn">Create Proxy Interaction</button>
 
-  <!-- Status Message -->
   <div id="statusMessage"></div>
 
   <script>
     const clientId = '35987d94-e13b-4da4-afd2-25b85bc1c3d6';
     const redirectUri = 'https://gmcglynn88.github.io/ExternalWorkCreation/';
     const responseType = 'token';
-    const oauthUrl = https://login.mypurecloud.ie/oauth/authorize?client_id=${clientId}&response_type=${responseType}&redirect_uri=${encodeURIComponent(redirectUri)};
+    const oauthUrl = `https://login.mypurecloud.ie/oauth/authorize?client_id=${clientId}&response_type=${responseType}&redirect_uri=${encodeURIComponent(redirectUri)}`;
 
     document.addEventListener('DOMContentLoaded', () => {
       const hash = window.location.hash.substring(1);
@@ -111,7 +104,7 @@
 
       } catch (error) {
         console.error('Error populating dropdowns:', error);
-        document.getElementById('statusMessage').innerText = Error loading data: ${error.message};
+        document.getElementById('statusMessage').innerText = `Error loading data: ${error.message}`;
       }
     }
 
@@ -121,12 +114,12 @@
       let hasMorePages = true;
 
       while (hasMorePages) {
-        const response = await fetch(${url}?pageNumber=${pageNumber}&pageSize=25, {
-          headers: { 'Authorization': Bearer ${token} }
+        const response = await fetch(`${url}?pageNumber=${pageNumber}&pageSize=25`, {
+          headers: { 'Authorization': `Bearer ${token}` }
         });
 
         if (!response.ok) {
-          throw new Error(Error fetching data: ${response.status} ${response.statusText});
+          throw new Error(`Error fetching data: ${response.status} ${response.statusText}`);
         }
 
         const data = await response.json();
@@ -151,7 +144,7 @@
         const interactionResponse = await fetch('https://api.mypurecloud.ie/api/v2/conversations/emails', {
           method: 'POST',
           headers: {
-            'Authorization': Bearer ${token},
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
@@ -164,52 +157,52 @@
         });
 
         if (!interactionResponse.ok) {
-          throw new Error(Error creating interaction: ${interactionResponse.status} ${interactionResponse.statusText});
+          throw new Error(`Error creating interaction: ${interactionResponse.status} ${interactionResponse.statusText}`);
         }
 
         const interaction = await interactionResponse.json();
         const conversationId = interaction.id;
 
-        const conversationDetailsResponse = await fetch(https://api.mypurecloud.ie/api/v2/conversations/${conversationId}, {
-          headers: { 'Authorization': Bearer ${token} }
+        const conversationDetailsResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!conversationDetailsResponse.ok) {
-          throw new Error(Error fetching conversation details: ${conversationDetailsResponse.status} ${conversationDetailsResponse.statusText});
+          throw new Error(`Error fetching conversation details: ${conversationDetailsResponse.status} ${conversationDetailsResponse.statusText}`);
         }
         const conversationDetails = await conversationDetailsResponse.json();
         const participantId = conversationDetails.participants[1].id;
 
-        const assignResponse = await fetch(https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}/participants/${participantId}/replace, {
+        const assignResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}/participants/${participantId}/replace`, {
           method: 'POST',
           headers: {
-            'Authorization': Bearer ${token},
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({ userId: userId })
         });
 
         if (!assignResponse.ok) {
-          throw new Error(Error assigning user: ${assignResponse.status} ${assignResponse.statusText});
+          throw new Error(`Error assigning user: ${assignResponse.status} ${assignResponse.statusText}`);
         }
 
-        const disconnectResponse = await fetch(https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}, {
+        const disconnectResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}`, {
           method: 'PATCH',
           headers: {
-            'Authorization': Bearer ${token},
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({ state: 'disconnected' })
         });
 
         if (!disconnectResponse.ok) {
-          throw new Error(Error disconnecting conversation: ${disconnectResponse.status} ${disconnectResponse.statusText});
+          throw new Error(`Error disconnecting conversation: ${disconnectResponse.status} ${disconnectResponse.statusText}`);
         }
 
         document.getElementById('statusMessage').innerText = 'Interaction created and assigned successfully!';
 
       } catch (error) {
         console.error('Error during interaction creation:', error);
-        document.getElementById('statusMessage').innerText = Error: ${error.message};
+        document.getElementById('statusMessage').innerText = `Error: ${error.message}`;
       }
     }
   </script>
