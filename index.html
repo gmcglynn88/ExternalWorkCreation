@@ -4,151 +4,264 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>External Work Creation</title>
-  <link href="https://fonts.googleapis.com/css2?family=Proxima+Nova&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --primary-color: #63AB8F;
+      --primary-hover: #4D8F77;
+      --border-color: #e0e0e0;
+      --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
     body {
-      font-family: 'Proxima Nova', Arial, sans-serif;
-      margin: 20px;
-      padding: 20px;
+      font-family: 'Aptos', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background-color: #f9f9f9;
+      padding: 2rem;
+      margin: 0;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.6;
+      color: #333;
     }
-    #logo-container {
+
+    .card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 2rem;
+      margin-top: 2rem;
+    }
+
+    .logo-container {
       text-align: center;
-      margin-bottom: 20px;
+      margin-bottom: 1.5rem;
     }
+
     #logo {
-      width: 300px;
+      max-width: 180px;
+      height: auto;
+      margin-bottom: 1rem;
     }
+
+    h1 {
+      color: var(--primary-color);
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      font-size: 1.8rem;
+      text-align: center;
+    }
+
     label {
-      margin-top: 10px;
       display: block;
-      font-weight: bold;
+      margin: 1.2rem 0 0.4rem;
+      font-weight: 500;
+      color: #555;
     }
-    select, input, button {
-      margin-top: 5px;
-      padding: 8px;
+
+    select, input {
       width: 100%;
-      max-width: 300px;
+      padding: 0.8rem;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 1rem;
+      transition: border 0.2s;
     }
+
+    select:focus, input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(99, 171, 143, 0.2);
+    }
+
+    button {
+      width: 100%;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 0.9rem;
+      font-size: 1rem;
+      font-weight: 500;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 2rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    button:hover {
+      background: var(--primary-hover);
+    }
+
     #statusMessage {
-      margin-top: 20px;
-      color: green;
+      margin-top: 1.5rem;
+      padding: 1rem;
+      border-radius: 4px;
+      background: #f5f5f5;
+      display: none;
+    }
+
+    .success {
+      color: #2e7d32;
+      border-left: 4px solid #4caf50;
+      padding-left: 1rem;
+    }
+
+    .error {
+      color: #c62828;
+      border-left: 4px solid #f44336;
+      padding-left: 1rem;
+    }
+
+    .loader {
+      display: none;
+      text-align: center;
+      margin: 1rem 0;
+    }
+
+    .spinner {
+      border: 3px solid rgba(0, 0, 0, 0.1);
+      border-radius: 50%;
+      border-top: 3px solid var(--primary-color);
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
   </style>
 </head>
 <body>
-  <div id="logo-container">
-    <img id="logo" src="https://raw.githubusercontent.com/gmcglynn88/ExternalWorkCreation/main/Consultinglogo.png" alt="Company Logo">
+  <div class="card">
+    <div class="logo-container">
+      <img id="logo" src="https://raw.githubusercontent.com/gmcglynn88/ExternalWorkCreation/main/Consultinglogo.png" alt="Company Logo">
+    </div>
+
+    <h1>External Work Creation</h1>
+
+    <label for="queueSelect">Select Queue:</label>
+    <select id="queueSelect"></select>
+
+    <label for="userSelect">Select User:</label>
+    <select id="userSelect"></select>
+
+    <label for="externalReference">External Reference:</label>
+    <input type="text" id="externalReference" placeholder="Enter external reference (optional)">
+
+    <div class="loader" id="loader">
+      <div class="spinner"></div>
+      <span>Creating interaction...</span>
+    </div>
+
+    <button id="createInteractionBtn">Create Proxy Interaction</button>
+
+    <div id="statusMessage"></div>
   </div>
-
-  <h1>External Work Creation</h1>
-
-  <label for="queueSelect">Select Queue:</label>
-  <select id="queueSelect"></select>
-
-  <label for="userSelect">Select User:</label>
-  <select id="userSelect"></select>
-
-  <label for="externalReference">External Reference:</label>
-  <input type="text" id="externalReference" placeholder="Enter external reference (optional)">
-
-  <button id="createInteractionBtn">Create Proxy Interaction</button>
-
-  <div id="statusMessage"></div>
 
   <script>
     const clientId = '35987d94-e13b-4da4-afd2-25b85bc1c3d6';
     const redirectUri = 'https://gmcglynn88.github.io/ExternalWorkCreation/';
-    const responseType = 'token';
-    const oauthUrl = `https://login.mypurecloud.ie/oauth/authorize?client_id=${clientId}&response_type=${responseType}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+    const oauthUrl = `https://login.mypurecloud.ie/oauth/authorize?client_id=${clientId}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
+    let accessToken = null;
 
     document.addEventListener('DOMContentLoaded', () => {
       const hash = window.location.hash.substring(1);
       const params = new URLSearchParams(hash);
-      const token = params.get('access_token');
+      accessToken = params.get('access_token');
 
-      if (!token) {
+      if (!accessToken) {
         window.location.href = oauthUrl;
       } else {
-        initializeApp(token);
+        initializeApp();
       }
     });
 
-    function initializeApp(token) {
-      populateDropdowns(token);
+    function showLoader(show) {
+      document.getElementById('loader').style.display = show ? 'block' : 'none';
+    }
+
+    function showStatusMessage(message, type='success') {
+      const statusDiv = document.getElementById('statusMessage');
+      statusDiv.style.display = 'block';
+      statusDiv.className = type;
+      statusDiv.innerHTML = message;
+    }
+
+    async function initializeApp() {
+      await populateDropdowns();
 
       document.getElementById('createInteractionBtn').addEventListener('click', () => {
-        createInteraction(token);
+        createInteraction();
       });
     }
 
-    async function populateDropdowns(token) {
+    async function populateDropdowns() {
       try {
-        const queues = await fetchAllPages('https://api.mypurecloud.ie/api/v2/routing/queues', token);
-        const users = await fetchAllPages('https://api.mypurecloud.ie/api/v2/users', token);
+        const queues = await fetchAllPages('https://api.mypurecloud.ie/api/v2/routing/queues');
+        const users = await fetchAllPages('https://api.mypurecloud.ie/api/v2/users');
 
         const queueSelect = document.getElementById('queueSelect');
-        queues.forEach(queue => {
-          const option = document.createElement('option');
-          option.value = queue.id;
-          option.text = queue.name;
-          queueSelect.add(option);
-        });
+        queues.forEach(q => queueSelect.add(new Option(q.name, q.id)));
 
         const userSelect = document.getElementById('userSelect');
-        users.forEach(user => {
-          const option = document.createElement('option');
-          option.value = user.id;
-          option.text = user.name;
-          userSelect.add(option);
-        });
+        users.forEach(u => userSelect.add(new Option(u.name, u.id)));
 
-      } catch (error) {
-        console.error('Error populating dropdowns:', error);
-        document.getElementById('statusMessage').innerText = `Error loading data: ${error.message}`;
+      } catch (err) {
+        console.error(err);
+        showStatusMessage(`Error loading data: ${err.message}`, 'error');
       }
     }
 
-    async function fetchAllPages(url, token) {
+    async function fetchAllPages(url) {
       let allItems = [];
       let pageNumber = 1;
-      let hasMorePages = true;
+      let hasMore = true;
 
-      while (hasMorePages) {
-        const response = await fetch(`${url}?pageNumber=${pageNumber}&pageSize=25`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+      while (hasMore) {
+        const res = await fetch(`${url}?pageNumber=${pageNumber}&pageSize=25`, {
+          headers: { 'Authorization': `Bearer ${accessToken}` }
         });
 
-        if (!response.ok) {
-          throw new Error(`Error fetching data: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        const data = await res.json();
         allItems = allItems.concat(data.entities);
 
-        if (data.pageCount > pageNumber) {
-          pageNumber++;
-        } else {
-          hasMorePages = false;
-        }
+        if (data.pageCount > pageNumber) pageNumber++;
+        else hasMore = false;
       }
 
       return allItems;
     }
 
-    async function createInteraction(token) {
+    async function createInteraction() {
       const queueId = document.getElementById('queueSelect').value;
       const userId = document.getElementById('userSelect').value;
       const externalReference = document.getElementById('externalReference').value;
 
+      if (!queueId || !userId) {
+        showStatusMessage('Please select both a queue and a user', 'error');
+        return;
+      }
+
+      showLoader(true);
+      showStatusMessage('', 'success');
+
       try {
-        const interactionResponse = await fetch('https://api.mypurecloud.ie/api/v2/conversations/emails', {
+        const interactionRes = await fetch('https://api.mypurecloud.ie/api/v2/conversations/emails', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            queueId: queueId,
+            queueId,
             provider: 'QualityForm',
             direction: 'INBOUND',
             fromName: 'External Work',
@@ -156,53 +269,31 @@
           })
         });
 
-        if (!interactionResponse.ok) {
-          throw new Error(`Error creating interaction: ${interactionResponse.status} ${interactionResponse.statusText}`);
-        }
-
-        const interaction = await interactionResponse.json();
+        if (!interactionRes.ok) throw new Error(`Error creating interaction: ${interactionRes.statusText}`);
+        const interaction = await interactionRes.json();
         const conversationId = interaction.id;
 
-        const conversationDetailsResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!conversationDetailsResponse.ok) {
-          throw new Error(`Error fetching conversation details: ${conversationDetailsResponse.status} ${conversationDetailsResponse.statusText}`);
-        }
-        const conversationDetails = await conversationDetailsResponse.json();
-        const participantId = conversationDetails.participants[1].id;
-
-        const assignResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}/participants/${participantId}/replace`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ userId: userId })
+        // Assign the user
+        const conversationDetailsRes = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}`, {
+          headers: { 'Authorization': `Bearer ${accessToken}` }
         });
 
-        if (!assignResponse.ok) {
-          throw new Error(`Error assigning user: ${assignResponse.status} ${assignResponse.statusText}`);
-        }
-
-        const disconnectResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}`, {
+        const participant = (await conversationDetailsRes.json()).participants[0].id;
+        await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}/participants/${participant}`, {
           method: 'PATCH',
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ state: 'disconnected' })
+          body: JSON.stringify({ 'userId': userId })
         });
 
-        if (!disconnectResponse.ok) {
-          throw new Error(`Error disconnecting conversation: ${disconnectResponse.status} ${disconnectResponse.statusText}`);
-        }
-
-        document.getElementById('statusMessage').innerText = 'Interaction created and assigned successfully!';
-
-      } catch (error) {
-        console.error('Error during interaction creation:', error);
-        document.getElementById('statusMessage').innerText = `Error: ${error.message}`;
+        showStatusMessage(`Interaction created successfully! Conversation ID: ${conversationId}`);
+      } catch (err) {
+        console.error(err);
+        showStatusMessage(`Error creating interaction: ${err.message}`, 'error');
+      } finally {
+        showLoader(false);
       }
     }
   </script>
