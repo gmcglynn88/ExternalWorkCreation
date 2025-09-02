@@ -103,6 +103,7 @@
       margin-top: 1.5rem;
       padding: 1rem;
       border-radius: 4px;
+      background: #f5f5f5;
       display: none;
     }
 
@@ -110,14 +111,12 @@
       color: #2e7d32;
       border-left: 4px solid #4caf50;
       padding-left: 1rem;
-      background-color: #f5f9f5;
     }
 
     .error {
       color: #c62828;
       border-left: 4px solid #f44336;
       padding-left: 1rem;
-      background-color: #fef5f5;
     }
 
     .loader {
@@ -142,72 +141,45 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-
-    .login-prompt {
-      text-align: center;
-      padding: 2rem;
-    }
-
-    .login-btn {
-      display: inline-block;
-      background: var(--primary-color);
-      color: white;
-      text-decoration: none;
-      padding: 0.8rem 1.5rem;
-      border-radius: 4px;
-      margin-top: 1rem;
-    }
-
-    .login-btn:hover {
-      background: var(--primary-hover);
-    }
   </style>
 </head>
 <body>
-  <div class="card" id="appContainer">
+  <div class="card">
     <div class="logo-container">
       <img id="logo" src="https://raw.githubusercontent.com/gmcglynn88/ExternalWorkCreation/main/Consultinglogo.png" alt="Company Logo">
     </div>
 
-    <div id="loginView" class="login-prompt">
-      <h1>External Work Creation</h1>
-      <p>Please log in to Genesys Cloud to continue</p>
-      <a href="#" id="loginBtn" class="login-btn">Login to Genesys Cloud</a>
+    <h1>External Work Creation</h1>
+
+    <label for="queueSelect">Select Queue:</label>
+    <select id="queueSelect">
+      <option value="">Loading queues...</option>
+    </select>
+
+    <label for="userSelect">Select User:</label>
+    <select id="userSelect">
+      <option value="">Loading users...</option>
+    </select>
+
+    <label for="externalReference">External Reference:</label>
+    <input type="text" id="externalReference" placeholder="Enter external reference (optional)">
+
+    <div class="loader" id="loader">
+      <div class="spinner"></div>
+      <span>Creating interaction...</span>
     </div>
 
-    <div id="appView" style="display: none;">
-      <h1>External Work Creation</h1>
+    <button id="createInteractionBtn" disabled>Create Proxy Interaction</button>
 
-      <label for="queueSelect">Select Queue:</label>
-      <select id="queueSelect">
-        <option value="">Loading queues...</option>
-      </select>
-
-      <label for="userSelect">Select User:</label>
-      <select id="userSelect">
-        <option value="">Loading users...</option>
-      </select>
-
-      <label for="externalReference">External Reference:</label>
-      <input type="text" id="externalReference" placeholder="Enter external reference (optional)">
-
-      <div class="loader" id="loader">
-        <div class="spinner"></div>
-        <span>Creating interaction...</span>
-      </div>
-
-      <button id="createInteractionBtn" disabled>Create Proxy Interaction</button>
-
-      <div id="statusMessage"></div>
-    </div>
+    <div id="statusMessage"></div>
   </div>
 
   <script>
-    // Configuration - Updated with your correct values
     const clientId = 'eb4badba-eec2-4a8d-a894-77fd495309ce';
     const redirectUri = 'https://gmcglynn88.github.io/ExternalWorkCreation/';
-    const environment = 'mypurecloud.ie';
-    
+    const oauthUrl = `https://login.mypurecloud.ie/oauth/authorize?client_id=${clientId}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
+    let accessToken = null;
+
     // Whitelisted IDs
     const whitelistedUserIds = [
       '08377fd8-3680-4a50-b909-c685e1567659',
@@ -219,70 +191,27 @@
       'e1d00554-accc-4efa-a3be-a9f1cbc01517'
     ];
 
-    // Global variables
-    let accessToken = null;
-
-    document.addEventListener('DOMContentLoaded', function() {
-      // Check for OAuth response in URL
+    document.addEventListener('DOMContentLoaded', () => {
       const hash = window.location.hash.substring(1);
       const params = new URLSearchParams(hash);
       accessToken = params.get('access_token');
-      
-      // Also check for token in session storage
+
       if (!accessToken) {
-        accessToken = sessionStorage.getItem('genesysCloudAccessToken');
-      }
-      
-      // Setup login button
-      document.getElementById('loginBtn').addEventListener('click', function(e) {
-        e.preventDefault();
-        initiateOAuthLogin();
-      });
-      
-      // Setup create interaction button
-      document.getElementById('createInteractionBtn').addEventListener('click', createInteraction);
-      
-      if (accessToken) {
-        // Store token and initialize app
-        sessionStorage.setItem('genesysCloudAccessToken', accessToken);
-        showAppView();
-        initializeApp();
+        window.location.href = oauthUrl;
       } else {
-        showLoginView();
+        initializeApp();
       }
     });
-
-    function initiateOAuthLogin() {
-      const oauthUrl = `https://login.${environment}/oauth/authorize?client_id=${clientId}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
-      window.location.href = oauthUrl;
-    }
-
-    function showLoginView() {
-      document.getElementById('loginView').style.display = 'block';
-      document.getElementById('appView').style.display = 'none';
-    }
-
-    function showAppView() {
-      document.getElementById('loginView').style.display = 'none';
-      document.getElementById('appView').style.display = 'block';
-    }
 
     function showLoader(show) {
       document.getElementById('loader').style.display = show ? 'block' : 'none';
     }
 
-    function showStatusMessage(message, type = 'success') {
+    function showStatusMessage(message, type='success') {
       const statusDiv = document.getElementById('statusMessage');
       statusDiv.style.display = 'block';
       statusDiv.className = type;
       statusDiv.innerHTML = message;
-      
-      // Auto-hide success messages after 5 seconds
-      if (type === 'success') {
-        setTimeout(() => {
-          statusDiv.style.display = 'none';
-        }, 5000);
-      }
     }
 
     function enableCreateButton(enable) {
@@ -290,33 +219,19 @@
     }
 
     async function initializeApp() {
-      try {
-        showLoader(true);
-        enableCreateButton(false);
-        
-        await populateQueues();
-        await populateUsers();
-        
-        enableCreateButton(true);
-      } catch (error) {
-        console.error('Initialization error:', error);
-        showStatusMessage(`Error initializing application: ${error.message}`, 'error');
-        
-        // If there's an auth error, force re-login
-        if (error.status === 401) {
-          sessionStorage.removeItem('genesysCloudAccessToken');
-          showLoginView();
-        }
-      } finally {
-        showLoader(false);
-      }
+      await populateDropdowns();
+
+      document.getElementById('createInteractionBtn').addEventListener('click', () => {
+        createInteraction();
+      });
     }
 
-    async function populateQueues() {
+    async function populateDropdowns() {
       try {
-        const queues = await fetchAllPages('/api/v2/routing/queues');
+        const queues = await fetchAllPages('https://api.mypurecloud.ie/api/v2/routing/queues');
+        const users = await fetchAllPages('https://api.mypurecloud.ie/api/v2/users');
+
         const queueSelect = document.getElementById('queueSelect');
-        
         queueSelect.innerHTML = '';
         
         // Filter queues based on whitelist
@@ -324,24 +239,11 @@
         
         if (filteredQueues.length === 0) {
           queueSelect.innerHTML = '<option value="">No queues available</option>';
-          return;
+        } else {
+          filteredQueues.forEach(q => queueSelect.add(new Option(q.name, q.id)));
         }
-        
-        filteredQueues.forEach(queue => {
-          queueSelect.add(new Option(queue.name, queue.id));
-        });
-      } catch (error) {
-        console.error('Error fetching queues:', error);
-        document.getElementById('queueSelect').innerHTML = '<option value="">Error loading queues</option>';
-        throw error;
-      }
-    }
 
-    async function populateUsers() {
-      try {
-        const users = await fetchAllPages('/api/v2/users?pageSize=100');
         const userSelect = document.getElementById('userSelect');
-        
         userSelect.innerHTML = '';
         
         // Filter users based on whitelist
@@ -349,50 +251,40 @@
         
         if (filteredUsers.length === 0) {
           userSelect.innerHTML = '<option value="">No users available</option>';
-          return;
+        } else {
+          filteredUsers.forEach(u => userSelect.add(new Option(u.name, u.id)));
         }
-        
-        filteredUsers.forEach(user => {
-          userSelect.add(new Option(user.name, user.id));
-        });
-      } catch (error) {
-        console.error('Error fetching users:', error);
-        document.getElementById('userSelect').innerHTML = '<option value="">Error loading users</option>';
-        throw error;
+
+        // Enable button if we have options
+        if (filteredQueues.length > 0 && filteredUsers.length > 0) {
+          enableCreateButton(true);
+        }
+
+      } catch (err) {
+        console.error(err);
+        showStatusMessage(`Error loading data: ${err.message}`, 'error');
       }
     }
 
-    async function fetchAllPages(endpoint) {
+    async function fetchAllPages(url) {
       let allItems = [];
       let pageNumber = 1;
-      let pageCount = 1;
+      let hasMore = true;
 
-      while (pageNumber <= pageCount) {
-        const response = await genesysCloudRequest(`${endpoint}${endpoint.includes('?') ? '&' : '?'}pageNumber=${pageNumber}&pageSize=25`);
-        
-        if (!response.ok) {
-          throw new Error(`API request failed: ${response.status} ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        allItems = allItems.concat(data.entities || []);
-        
-        pageCount = data.pageCount || 1;
-        pageNumber++;
+      while (hasMore) {
+        const res = await fetch(`${url}?pageNumber=${pageNumber}&pageSize=25`, {
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        const data = await res.json();
+        allItems = allItems.concat(data.entities);
+
+        if (data.pageCount > pageNumber) pageNumber++;
+        else hasMore = false;
       }
 
       return allItems;
-    }
-
-    async function genesysCloudRequest(endpoint) {
-      const url = `https://api.${environment}${endpoint}`;
-      
-      return fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        }
-      });
     }
 
     async function createInteraction() {
@@ -410,83 +302,48 @@
       showStatusMessage('', 'success');
 
       try {
-        // Create the email conversation
-        const createResponse = await genesysCloudRequest('/api/v2/conversations/emails', {
+        const interactionRes = await fetch('https://api.mypurecloud.ie/api/v2/conversations/emails', {
           method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
           body: JSON.stringify({
-            queueId: queueId,
-            fromName: 'External Work Creation Tool',
-            fromAddress: 'no-reply@example.com',
-            subject: 'External Work Item',
-            direction: 'Inbound',
-            provider: 'ExternalWorkCreation',
-            attributes: {
-              externalReference: externalReference || 'Not specified'
-            }
+            queueId,
+            provider: 'QualityForm',
+            direction: 'INBOUND',
+            fromName: 'External Work',
+            attributes: { 'External Link': externalReference }
           })
         });
 
-        if (!createResponse.ok) {
-          const error = await createResponse.text();
-          throw new Error(`Failed to create conversation: ${createResponse.status} - ${error}`);
-        }
+        if (!interactionRes.ok) throw new Error(`Error creating interaction: ${interactionRes.statusText}`);
+        const interaction = await interactionRes.json();
+        const conversationId = interaction.id;
 
-        const conversation = await createResponse.json();
-        const conversationId = conversation.id;
+        // Assign the user
+        const conversationDetailsRes = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}`, {
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
 
-        // Get the conversation details to find the participant ID
-        const conversationDetailsResponse = await genesysCloudRequest(`/api/v2/conversations/${conversationId}`);
-        
-        if (!conversationDetailsResponse.ok) {
-          throw new Error('Failed to get conversation details');
-        }
-
-        const conversationDetails = await conversationDetailsResponse.json();
-        const participantId = conversationDetails.participants[0].id;
-
-        // Assign the participant to the selected user
-        const assignResponse = await genesysCloudRequest(`/api/v2/conversations/${conversationId}/participants/${participantId}`, {
+        const participant = (await conversationDetailsRes.json()).participants[0].id;
+        await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}/participants/${participant}`, {
           method: 'PATCH',
-          body: JSON.stringify({
-            userId: userId
-          })
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 'userId': userId })
         });
 
-        if (!assignResponse.ok) {
-          throw new Error('Failed to assign user to conversation');
-        }
-
-        showStatusMessage(`Success! Created interaction with ID: ${conversationId}`);
-        
-        // Clear the external reference field for next use
-        document.getElementById('externalReference').value = '';
-      } catch (error) {
-        console.error('Error creating interaction:', error);
-        showStatusMessage(`Error: ${error.message}`, 'error');
-        
-        // If there's an auth error, force re-login
-        if (error.status === 401) {
-          sessionStorage.removeItem('genesysCloudAccessToken');
-          showLoginView();
-        }
+        showStatusMessage(`Interaction created successfully! Conversation ID: ${conversationId}`);
+      } catch (err) {
+        console.error(err);
+        showStatusMessage(`Error creating interaction: ${err.message}`, 'error');
       } finally {
         showLoader(false);
         enableCreateButton(true);
       }
-    }
-
-    // Override genesysCloudRequest to handle both GET and other methods
-    async function genesysCloudRequest(endpoint, options = {}) {
-      const url = `https://api.${environment}${endpoint}`;
-      const config = {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        },
-        ...options
-      };
-      
-      return fetch(url, config);
     }
   </script>
 </body>
