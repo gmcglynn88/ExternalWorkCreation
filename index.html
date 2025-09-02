@@ -183,9 +183,20 @@
     ];
 
     document.addEventListener('DOMContentLoaded', () => {
+      // Try session storage first
+      accessToken = sessionStorage.getItem('accessToken');
+
+      // Then check hash from OAuth redirect
       const hash = window.location.hash.substring(1);
       const params = new URLSearchParams(hash);
-      accessToken = params.get('access_token');
+      const tokenFromHash = params.get('access_token');
+
+      if (tokenFromHash) {
+        accessToken = tokenFromHash;
+        sessionStorage.setItem('accessToken', accessToken);
+        // Clear hash so we don't trigger again on refresh
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
 
       if (!accessToken) {
         window.location.href = oauthUrl;
