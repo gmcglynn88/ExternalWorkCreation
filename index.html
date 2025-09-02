@@ -161,6 +161,15 @@
     .login-btn:hover {
       background: var(--primary-hover);
     }
+
+    .auto-login-container {
+      text-align: center;
+      margin: 1rem 0;
+    }
+
+    .auto-login-checkbox {
+      margin-right: 8px;
+    }
   </style>
 </head>
 <body>
@@ -169,9 +178,15 @@
       <img id="logo" src="https://raw.githubusercontent.com/gmcglynn88/ExternalWorkCreation/main/Consultinglogo.png" alt="Company Logo">
     </div>
 
-    <div id="loginView" class="login-prompt">
+    <div id="loginView" class="login-prompt" style="display: none;">
       <h1>External Work Creation</h1>
       <p>Please log in to Genesys Cloud to continue</p>
+      <div class="auto-login-container">
+        <label>
+          <input type="checkbox" id="autoLogin" class="auto-login-checkbox">
+          Auto-login in the future
+        </label>
+      </div>
       <a href="#" id="loginBtn" class="login-btn">Login to Genesys Cloud</a>
     </div>
 
@@ -223,6 +238,9 @@
     let accessToken = null;
 
     document.addEventListener('DOMContentLoaded', function() {
+      // Check for auto-login preference
+      const autoLogin = localStorage.getItem('genesysCloudAutoLogin') === 'true';
+      
       // Check for OAuth response in URL
       const hash = window.location.hash.substring(1);
       const params = new URLSearchParams(hash);
@@ -239,6 +257,11 @@
         initiateOAuthLogin();
       });
       
+      // Setup auto-login checkbox
+      document.getElementById('autoLogin').addEventListener('change', function(e) {
+        localStorage.setItem('genesysCloudAutoLogin', e.target.checked);
+      });
+      
       // Setup create interaction button
       document.getElementById('createInteractionBtn').addEventListener('click', createInteraction);
       
@@ -247,6 +270,9 @@
         sessionStorage.setItem('genesysCloudAccessToken', accessToken);
         showAppView();
         initializeApp();
+      } else if (autoLogin) {
+        // Auto-login if user previously selected the option
+        initiateOAuthLogin();
       } else {
         showLoginView();
       }
@@ -260,6 +286,9 @@
     function showLoginView() {
       document.getElementById('loginView').style.display = 'block';
       document.getElementById('appView').style.display = 'none';
+      
+      // Set the checkbox based on stored preference
+      document.getElementById('autoLogin').checked = localStorage.getItem('genesysCloudAutoLogin') === 'true';
     }
 
     function showAppView() {
