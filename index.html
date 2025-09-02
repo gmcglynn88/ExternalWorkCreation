@@ -171,7 +171,7 @@
     const oauthUrl = `https://login.mypurecloud.ie/oauth/authorize?client_id=${clientId}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
     let accessToken = null;
 
-    // Whitelisted IDs
+    // ✅ Whitelisted IDs
     const whitelistedUserIds = [
       '08377fd8-3680-4a50-b909-c685e1567659',
       '4798d57e-9c35-4692-99e8-ae61b27478db'
@@ -194,17 +194,6 @@
       }
     });
 
-    function showLoader(show) {
-      document.getElementById('loader').style.display = show ? 'block' : 'none';
-    }
-
-    function showStatusMessage(message, type='success') {
-      const statusDiv = document.getElementById('statusMessage');
-      statusDiv.style.display = 'block';
-      statusDiv.className = type;
-      statusDiv.innerHTML = message;
-    }
-
     async function initializeApp() {
       await populateDropdowns();
 
@@ -218,15 +207,15 @@
         const queues = await fetchAllPages('https://api.mypurecloud.ie/api/v2/routing/queues');
         const users = await fetchAllPages('https://api.mypurecloud.ie/api/v2/users');
 
-        // Filter queues and users based on whitelisted IDs
-        const filteredQueues = queues.filter(q => whitelistedQueueIds.includes(q.id));
-        const filteredUsers = users.filter(u => whitelistedUserIds.includes(u.id));
-
         const queueSelect = document.getElementById('queueSelect');
-        filteredQueues.forEach(q => queueSelect.add(new Option(q.name, q.id)));
+        queues
+          .filter(q => whitelistedQueueIds.includes(q.id)) // ✅ whitelist filter
+          .forEach(q => queueSelect.add(new Option(q.name, q.id)));
 
         const userSelect = document.getElementById('userSelect');
-        filteredUsers.forEach(u => userSelect.add(new Option(u.name, u.id)));
+        users
+          .filter(u => whitelistedUserIds.includes(u.id)) // ✅ whitelist filter
+          .forEach(u => userSelect.add(new Option(u.name, u.id)));
 
       } catch (err) {
         console.error(err);
@@ -269,7 +258,6 @@
       showStatusMessage('', 'success');
 
       try {
-        // Create the email interaction
         const interactionRes = await fetch('https://api.mypurecloud.ie/api/v2/conversations/emails', {
           method: 'POST',
           headers: {
@@ -281,8 +269,6 @@
             provider: 'QualityForm',
             direction: 'INBOUND',
             fromName: 'External Work',
-            fromAddress: 'external@work.example',
-            subject: 'External Work Item',
             attributes: { 'External Link': externalReference }
           })
         });
@@ -291,23 +277,13 @@
         const interaction = await interactionRes.json();
         const conversationId = interaction.id;
 
-        // Wait a moment for the conversation to be fully created
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // Get the conversation details to find the participant ID
+        // Assign the user
         const conversationDetailsRes = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}`, {
           headers: { 'Authorization': `Bearer ${accessToken}` }
         });
 
-        if (!conversationDetailsRes.ok) throw new Error(`Error getting conversation details: ${conversationDetailsRes.statusText}`);
-        const conversationDetails = await conversationDetailsRes.json();
-        
-        // Find the customer participant
-        const customerParticipant = conversationDetails.participants.find(p => p.purpose === 'customer');
-        if (!customerParticipant) throw new Error('Could not find customer participant');
-
-        // Assign the interaction to the user
-        await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}/participants/${customerParticipant.id}`, {
+        const participant = (await conversationDetailsRes.json()).participants[0].id;
+        await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}/participants/${participant}`, {
           method: 'PATCH',
           headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -316,24 +292,24 @@
           body: JSON.stringify({ 'userId': userId })
         });
 
-        // Wait a moment for the assignment to complete
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Disconnect the email conversation using the correct API
-        await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`
-          }
-        });
-
-        showStatusMessage(`Interaction created, assigned, and disconnected successfully! Conversation ID: ${conversationId}`);
+        showStatusMessage(`Interaction created successfully! Conversation ID: ${conversationId}`);
       } catch (err) {
         console.error(err);
         showStatusMessage(`Error creating interaction: ${err.message}`, 'error');
       } finally {
         showLoader(false);
       }
+    }
+
+    function showLoader(show) {
+      document.getElementById('loader').style.display = show ? 'block' : 'none';
+    }
+
+    function showStatusMessage(message, type='success') {
+      const statusDiv = document.getElementById('statusMessage');
+      statusDiv.style.display = 'block';
+      statusDiv.className = type;
+      statusDiv.innerHTML = message;
     }
   </script>
 </body>
