@@ -343,22 +343,20 @@
 
         if (!assignResponse.ok) throw new Error('Failed to assign user to conversation');
 
-        // Step 4: Close the conversation
-        const closeResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}/participants/${participantId}/wrapup`, {
-          method: 'POST',
+        // Step 4: Close the conversation by disconnecting the participant
+        const closeResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}/participants/${participantId}`, {
+          method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            wrapupCode: 'external-work-created',
-            userId: userId
-          })
+            'Authorization': `Bearer ${accessToken}`
+          }
         });
 
-        if (!closeResponse.ok) throw new Error('Failed to close conversation');
-
-        showStatusMessage(`Interaction created and closed successfully! Conversation ID: ${conversationId}`);
+        if (!closeResponse.ok) {
+          console.warn('Failed to close conversation, but interaction was created and assigned');
+          showStatusMessage(`Interaction created and assigned successfully! Conversation ID: ${conversationId} (Note: Could not automatically close)`);
+        } else {
+          showStatusMessage(`Interaction created, assigned, and closed successfully! Conversation ID: ${conversationId}`);
+        }
       } catch (err) {
         console.error(err);
         showStatusMessage(`Error creating interaction: ${err.message}`, 'error');
