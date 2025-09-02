@@ -302,6 +302,7 @@
       showStatusMessage('', 'success');
 
       try {
+        // Step 1: Create the email conversation
         const interactionRes = await fetch('https://api.mypurecloud.ie/api/v2/conversations/emails', {
           method: 'POST',
           headers: {
@@ -321,13 +322,17 @@
         const interaction = await interactionRes.json();
         const conversationId = interaction.id;
 
-        // Assign the user
+        // Step 2: Get the participant ID
         const conversationDetailsRes = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}`, {
           headers: { 'Authorization': `Bearer ${accessToken}` }
         });
 
-        const participant = (await conversationDetailsRes.json()).participants[0].id;
-        await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}/participants/${participant}`, {
+        if (!conversationDetailsRes.ok) throw new Error('Failed to get conversation details');
+        const conversationDetails = await conversationDetailsRes.json();
+        const participantId = conversationDetails.participants[0].id;
+
+        // Step 3: Assign the user to the conversation
+        const assignResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}/participants/${participantId}`, {
           method: 'PATCH',
           headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -336,7 +341,24 @@
           body: JSON.stringify({ 'userId': userId })
         });
 
-        showStatusMessage(`Interaction created successfully! Conversation ID: ${conversationId}`);
+        if (!assignResponse.ok) throw new Error('Failed to assign user to conversation');
+
+        // Step 4: Close the conversation
+        const closeResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}/participants/${participantId}/wrapup`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            wrapupCode: 'external-work-created',
+            userId: userId
+          })
+        });
+
+        if (!closeResponse.ok) throw new Error('Failed to close conversation');
+
+        showStatusMessage(`Interaction created and closed successfully! Conversation ID: ${conversationId}`);
       } catch (err) {
         console.error(err);
         showStatusMessage(`Error creating interaction: ${err.message}`, 'error');
