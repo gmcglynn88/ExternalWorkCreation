@@ -322,7 +322,7 @@
         const interaction = await interactionRes.json();
         const conversationId = interaction.id;
 
-        // Step 2: Get the participant ID
+        // Step 2: Get the participant and communication IDs
         const conversationDetailsRes = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}`, {
           headers: { 'Authorization': `Bearer ${accessToken}` }
         });
@@ -330,6 +330,7 @@
         if (!conversationDetailsRes.ok) throw new Error('Failed to get conversation details');
         const conversationDetails = await conversationDetailsRes.json();
         const participantId = conversationDetails.participants[0].id;
+        const communicationId = conversationDetails.participants[0].calls[0].id;
 
         // Step 3: Assign the user to the conversation
         const assignResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}/participants/${participantId}`, {
@@ -343,16 +344,23 @@
 
         if (!assignResponse.ok) throw new Error('Failed to assign user to conversation');
 
-        // Step 4: Close the conversation by disconnecting the participant
-        const closeResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}/participants/${participantId}`, {
-          method: 'DELETE',
+        // Step 4: Close the communication using the correct API endpoint
+        const closeResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}/participants/${participantId}/communications/${communicationId}`, {
+          method: 'PATCH',
           headers: {
-            'Authorization': `Bearer ${accessToken}`
-          }
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            state: 'disconnected',
+            disposition: {
+              code: 'EXTERNAL_WORK_CREATED'
+            }
+          })
         });
 
         if (!closeResponse.ok) {
-          console.warn('Failed to close conversation, but interaction was created and assigned');
+          console.warn('Failed to close communication, but interaction was created and assigned');
           showStatusMessage(`Interaction created and assigned successfully! Conversation ID: ${conversationId} (Note: Could not automatically close)`);
         } else {
           showStatusMessage(`Interaction created, assigned, and closed successfully! Conversation ID: ${conversationId}`);
