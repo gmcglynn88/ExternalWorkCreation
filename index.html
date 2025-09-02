@@ -319,17 +319,12 @@
         // Wait a moment for the assignment to complete
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        // Disconnect the interaction immediately after assignment
-        await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}/participants/${customerParticipant.id}/replace`, {
-          method: 'POST',
+        // Disconnect the email conversation using the correct API
+        await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}`, {
+          method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            userId: userId,
-            state: 'disconnected'
-          })
+            'Authorization': `Bearer ${accessToken}`
+          }
         });
 
         showStatusMessage(`Interaction created, assigned, and disconnected successfully! Conversation ID: ${conversationId}`);
