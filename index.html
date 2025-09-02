@@ -94,11 +94,6 @@
       background: var(--primary-hover);
     }
 
-    button:disabled {
-      background: #cccccc;
-      cursor: not-allowed;
-    }
-
     #statusMessage {
       margin-top: 1.5rem;
       padding: 1rem;
@@ -152,14 +147,10 @@
     <h1>External Work Creation</h1>
 
     <label for="queueSelect">Select Queue:</label>
-    <select id="queueSelect">
-      <option value="">Loading queues...</option>
-    </select>
+    <select id="queueSelect"></select>
 
     <label for="userSelect">Select User:</label>
-    <select id="userSelect">
-      <option value="">Loading users...</option>
-    </select>
+    <select id="userSelect"></select>
 
     <label for="externalReference">External Reference:</label>
     <input type="text" id="externalReference" placeholder="Enter external reference (optional)">
@@ -169,13 +160,13 @@
       <span>Creating interaction...</span>
     </div>
 
-    <button id="createInteractionBtn" disabled>Create Proxy Interaction</button>
+    <button id="createInteractionBtn">Create Proxy Interaction</button>
 
     <div id="statusMessage"></div>
   </div>
 
   <script>
-    const clientId = 'eb4badba-eec2-4a8d-a894-77fd495309ce';
+    const clientId = '35987d94-e13b-4da4-afd2-25b85bc1c3d6';
     const redirectUri = 'https://gmcglynn88.github.io/ExternalWorkCreation/';
     const oauthUrl = `https://login.mypurecloud.ie/oauth/authorize?client_id=${clientId}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
     let accessToken = null;
@@ -214,10 +205,6 @@
       statusDiv.innerHTML = message;
     }
 
-    function enableCreateButton(enable) {
-      document.getElementById('createInteractionBtn').disabled = !enable;
-    }
-
     async function initializeApp() {
       await populateDropdowns();
 
@@ -231,34 +218,15 @@
         const queues = await fetchAllPages('https://api.mypurecloud.ie/api/v2/routing/queues');
         const users = await fetchAllPages('https://api.mypurecloud.ie/api/v2/users');
 
-        const queueSelect = document.getElementById('queueSelect');
-        queueSelect.innerHTML = '';
-        
-        // Filter queues based on whitelist
+        // Filter queues and users based on whitelisted IDs
         const filteredQueues = queues.filter(q => whitelistedQueueIds.includes(q.id));
-        
-        if (filteredQueues.length === 0) {
-          queueSelect.innerHTML = '<option value="">No queues available</option>';
-        } else {
-          filteredQueues.forEach(q => queueSelect.add(new Option(q.name, q.id)));
-        }
+        const filteredUsers = users.filter(u => whitelistedUserIds.includes(u.id));
+
+        const queueSelect = document.getElementById('queueSelect');
+        filteredQueues.forEach(q => queueSelect.add(new Option(q.name, q.id)));
 
         const userSelect = document.getElementById('userSelect');
-        userSelect.innerHTML = '';
-        
-        // Filter users based on whitelist
-        const filteredUsers = users.filter(u => whitelistedUserIds.includes(u.id));
-        
-        if (filteredUsers.length === 0) {
-          userSelect.innerHTML = '<option value="">No users available</option>';
-        } else {
-          filteredUsers.forEach(u => userSelect.add(new Option(u.name, u.id)));
-        }
-
-        // Enable button if we have options
-        if (filteredQueues.length > 0 && filteredUsers.length > 0) {
-          enableCreateButton(true);
-        }
+        filteredUsers.forEach(u => userSelect.add(new Option(u.name, u.id)));
 
       } catch (err) {
         console.error(err);
@@ -298,11 +266,9 @@
       }
 
       showLoader(true);
-      enableCreateButton(false);
       showStatusMessage('', 'success');
 
       try {
-        // Step 1: Create the email conversation
         const interactionRes = await fetch('https://api.mypurecloud.ie/api/v2/conversations/emails', {
           method: 'POST',
           headers: {
@@ -322,18 +288,13 @@
         const interaction = await interactionRes.json();
         const conversationId = interaction.id;
 
-        // Step 2: Get the participant and communication IDs
+        // Assign the user
         const conversationDetailsRes = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}`, {
           headers: { 'Authorization': `Bearer ${accessToken}` }
         });
 
-        if (!conversationDetailsRes.ok) throw new Error('Failed to get conversation details');
-        const conversationDetails = await conversationDetailsRes.json();
-        const participantId = conversationDetails.participants[0].id;
-        const communicationId = conversationDetails.participants[0].calls[0].id;
-
-        // Step 3: Assign the user to the conversation
-        const assignResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}/participants/${participantId}`, {
+        const participant = (await conversationDetailsRes.json()).participants[0].id;
+        await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}/participants/${participant}`, {
           method: 'PATCH',
           headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -342,35 +303,12 @@
           body: JSON.stringify({ 'userId': userId })
         });
 
-        if (!assignResponse.ok) throw new Error('Failed to assign user to conversation');
-
-        // Step 4: Close the communication using the correct API endpoint
-        const closeResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}/participants/${participantId}/communications/${communicationId}`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            state: 'disconnected',
-            disposition: {
-              code: 'EXTERNAL_WORK_CREATED'
-            }
-          })
-        });
-
-        if (!closeResponse.ok) {
-          console.warn('Failed to close communication, but interaction was created and assigned');
-          showStatusMessage(`Interaction created and assigned successfully! Conversation ID: ${conversationId} (Note: Could not automatically close)`);
-        } else {
-          showStatusMessage(`Interaction created, assigned, and closed successfully! Conversation ID: ${conversationId}`);
-        }
+        showStatusMessage(`Interaction created successfully! Conversation ID: ${conversationId}`);
       } catch (err) {
         console.error(err);
         showStatusMessage(`Error creating interaction: ${err.message}`, 'error');
       } finally {
         showLoader(false);
-        enableCreateButton(true);
       }
     }
   </script>
