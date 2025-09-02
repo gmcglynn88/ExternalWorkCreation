@@ -269,6 +269,7 @@
       showStatusMessage('', 'success');
 
       try {
+        // Create the email interaction
         const interactionRes = await fetch('https://api.mypurecloud.ie/api/v2/conversations/emails', {
           method: 'POST',
           headers: {
@@ -280,6 +281,8 @@
             provider: 'QualityForm',
             direction: 'INBOUND',
             fromName: 'External Work',
+            fromAddress: 'external@work.example',
+            subject: 'External Work Item',
             attributes: { 'External Link': externalReference }
           })
         });
@@ -288,13 +291,23 @@
         const interaction = await interactionRes.json();
         const conversationId = interaction.id;
 
-        // Assign the user
+        // Wait a moment for the conversation to be fully created
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Get the conversation details to find the participant ID
         const conversationDetailsRes = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}`, {
           headers: { 'Authorization': `Bearer ${accessToken}` }
         });
 
-        const participant = (await conversationDetailsRes.json()).participants[0].id;
-        await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}/participants/${participant}`, {
+        if (!conversationDetailsRes.ok) throw new Error(`Error getting conversation details: ${conversationDetailsRes.statusText}`);
+        const conversationDetails = await conversationDetailsRes.json();
+        
+        // Find the customer participant
+        const customerParticipant = conversationDetails.participants.find(p => p.purpose === 'customer');
+        if (!customerParticipant) throw new Error('Could not find customer participant');
+
+        // Assign the interaction to the user
+        await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}/participants/${customerParticipant.id}`, {
           method: 'PATCH',
           headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -303,7 +316,23 @@
           body: JSON.stringify({ 'userId': userId })
         });
 
-        showStatusMessage(`Interaction created successfully! Conversation ID: ${conversationId}`);
+        // Wait a moment for the assignment to complete
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Disconnect the interaction immediately after assignment
+        await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}/participants/${customerParticipant.id}/replace`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            userId: userId,
+            state: 'disconnected'
+          })
+        });
+
+        showStatusMessage(`Interaction created, assigned, and disconnected successfully! Conversation ID: ${conversationId}`);
       } catch (err) {
         console.error(err);
         showStatusMessage(`Error creating interaction: ${err.message}`, 'error');
