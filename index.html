@@ -1,346 +1,209 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>External Work Creation</title>
+  <link href="https://fonts.googleapis.com/css2?family=Proxima+Nova&display=swap" rel="stylesheet">
   <style>
-    :root { --primary-color:#63AB8F; --primary-hover:#4D8F77; --border-color:#e0e0e0; --shadow:0 2px 8px rgba(0,0,0,.1); }
-    body{font-family:'Aptos','Segoe UI',system-ui,-apple-system,sans-serif;background:#f9f9f9;margin:0;padding:2rem;max-width:650px;margin-inline:auto;color:#333;line-height:1.6}
-    .card{background:#fff;border-radius:8px;box-shadow:var(--shadow);padding:2rem;margin-top:2rem}
-    .logo-container{text-align:center;margin-bottom:1.5rem}
-    #logo{max-width:180px;height:auto;margin-bottom:1rem}
-    h1{color:var(--primary-color);font-weight:600;margin-bottom:1.5rem;font-size:1.8rem;text-align:center}
-    label{display:block;margin:1.2rem 0 .4rem;font-weight:500;color:#555}
-    select,input{width:100%;padding:.8rem;border:1px solid var(--border-color);border-radius:4px;font:inherit;transition:border .2s}
-    select:focus,input:focus{outline:none;border-color:var(--primary-color);box-shadow:0 0 0 2px rgba(99,171,143,.2)}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    button{width:100%;background:var(--primary-color);color:#fff;border:none;padding:.9rem;font-size:1rem;font-weight:500;border-radius:4px;cursor:pointer;transition:background .2s;margin-top:2rem;text-transform:uppercase;letter-spacing:.5px}
-    button:hover{background:var(--primary-hover)}
-    button:disabled{opacity:.6;cursor:not-allowed}
-    #statusMessage{margin-top:1.5rem;padding:1rem;border-radius:4px;background:#f5f5f5;display:none}
-    .success{color:#2e7d32;border-left:4px solid #4caf50;padding-left:1rem}
-    .error{color:#c62828;border-left:4px solid #f44336;padding-left:1rem}
-    .loader{display:none;text-align:center;margin:1rem 0}
-    .spinner{border:3px solid rgba(0,0,0,.1);border-top:3px solid var(--primary-color);border-radius:50%;width:20px;height:20px;animation:spin 1s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    small.hint{color:#666;display:block;margin-top:.25rem}
+    body {
+      font-family: 'Proxima Nova', Arial, sans-serif;
+      margin: 20px;
+      padding: 20px;
+    }
+    #logo-container {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    #logo {
+      width: 300px;
+    }
+    label {
+      margin-top: 10px;
+      display: block;
+      font-weight: bold;
+    }
+    select, input, button {
+      margin-top: 5px;
+      padding: 8px;
+      width: 100%;
+      max-width: 300px;
+    }
+    #statusMessage {
+      margin-top: 20px;
+      color: green;
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <div class="logo-container">
-      <img id="logo" src="https://raw.githubusercontent.com/gmcglynn88/ExternalWorkCreation/main/Consultinglogo.png" alt="Company Logo">
-    </div>
-    <h1>External Work Creation</h1>
-
-    <div class="row">
-      <div>
-        <label for="regionSelect">Genesys Cloud Region</label>
-        <select id="regionSelect">
-          <option value="mypurecloud.ie" selected>Dublin (mypurecloud.ie)</option>
-          <option value="euw2.pure.cloud">London (euw2.pure.cloud)</option>
-          <option value="mypurecloud.de">Frankfurt (mypurecloud.de)</option>
-          <option value="mypurecloud.com">US-East (mypurecloud.com)</option>
-          <option value="usw2.pure.cloud">US-West2 (usw2.pure.cloud)</option>
-          <option value="apne2.pure.cloud">Tokyo (apne2.pure.cloud)</option>
-          <option value="aps1.pure.cloud">Sydney (aps1.pure.cloud)</option>
-        </select>
-        <small class="hint">Pick the org’s region (Dublin vs London matters).</small>
-      </div>
-      <div>
-        <label for="externalReference">External Reference</label>
-        <input type="text" id="externalReference" placeholder="Optional ref/link">
-      </div>
-    </div>
-
-    <label for="queueSelect">Select Queue</label>
-    <select id="queueSelect"></select>
-
-    <label for="userSelect">Select User</label>
-    <select id="userSelect"></select>
-
-    <div class="loader" id="loader"><div class="spinner"></div><span>Creating interaction...</span></div>
-    <button id="createInteractionBtn" disabled>Create Proxy Interaction</button>
-    <div id="statusMessage"></div>
+  <div id="logo-container">
+    <img id="logo" src="https://raw.githubusercontent.com/gmcglynn88/ExternalWorkCreation/main/Consultinglogo.png" alt="Company Logo">
   </div>
 
+  <h1>External Work Creation</h1>
+
+  <label for="queueSelect">Select Queue:</label>
+  <select id="queueSelect"></select>
+
+  <label for="userSelect">Select User:</label>
+  <select id="userSelect"></select>
+
+  <label for="externalReference">External Reference:</label>
+  <input type="text" id="externalReference" placeholder="Enter external reference (optional)">
+
+  <button id="createInteractionBtn">Create Proxy Interaction</button>
+
+  <div id="statusMessage"></div>
+
   <script>
-    // =========================
-    // Config you may edit
-    // =========================
-    const clientId = 'f2a0fa16-33cb-480b-a4ef-4766812dfb81';
+    const clientId = '35987d94-e13b-4da4-afd2-25b85bc1c3d6';
+    const redirectUri = 'https://gmcglynn88.github.io/ExternalWorkCreation/';
+    const responseType = 'token';
+    const oauthUrl = `https://login.mypurecloud.ie/oauth/authorize?client_id=${clientId}&response_type=${responseType}&redirect_uri=${encodeURIComponent(redirectUri)}`;
 
-    // Whitelists (unchanged)
-    const whitelistedUserIds = [
-      'fa677b42-4aff-45af-b7e7-749418788b88',
-      '206a7f52-4f89-446f-afbf-ac879147a7ad',
-      '14ecd5fc-30f9-4214-809f-93771752bfb6',
-      '79148e85-0da8-4f3e-9cdf-1ce4d832f5a4',
-      '4ec6fd9a-e335-4d96-9504-05a1fbaa46a9',
-      '207b29f5-8895-429c-b3bb-4879b41d8718',
-      '4cd8cbf4-a8a1-4b49-9769-825d1cfc9e08',
-      '6e917925-2cff-49b5-a730-55db79445280',
-      'fed76596-cfa5-4fda-bb15-49985065480e',
-      '660c4154-ba9b-4e84-90ec-c9c9b409ac41'
-    ];
-    const whitelistedQueueIds = [
-      '4a6f26c7-2b69-4c34-99e2-e156230ec2bd'
-    ];
-
-    // =========================
-    // Region plumbing
-    // =========================
-    function buildEnv(host) {
-      const loginBase = `https://login.${host}`;
-      const apiBase   = `https://api.${host}`;
-      return { loginBase, apiBase };
-    }
-    function getExactRedirectUri(){ return `${location.origin}${location.pathname}`; }
-    function getAccessTokenFromHash() {
-      const hash = window.location.hash.replace(/^#/, '');
+    document.addEventListener('DOMContentLoaded', () => {
+      const hash = window.location.hash.substring(1);
       const params = new URLSearchParams(hash);
-      return params.get('access_token');
-    }
-    function buildAuthorizeUrl(loginBase) {
-      const redirectUri = getExactRedirectUri();
-      return `${loginBase}/oauth/authorize?client_id=${encodeURIComponent(clientId)}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
-    }
+      const token = params.get('access_token');
 
-    // =========================
-    // State
-    // =========================
-    let accessToken = null;
-    let apiBase = 'https://api.mypurecloud.ie';
-    let loginBase = 'https://login.mypurecloud.ie';
-
-    // =========================
-    // Boot
-    // =========================
-    document.addEventListener('DOMContentLoaded', async () => {
-      const region = document.getElementById('regionSelect').value;
-      ({ loginBase, apiBase } = buildEnv(region));
-
-      accessToken = getAccessTokenFromHash();
-      if (!accessToken) {
-        window.location.href = buildAuthorizeUrl(loginBase);
-        return;
+      if (!token) {
+        window.location.href = oauthUrl;
+      } else {
+        initializeApp(token);
       }
-
-      await populateDropdowns();
-      document.getElementById('createInteractionBtn').addEventListener('click', createInteraction);
-      document.getElementById('queueSelect').addEventListener('change', toggleCreateButton);
-      document.getElementById('userSelect').addEventListener('change', toggleCreateButton);
-      document.getElementById('regionSelect').addEventListener('change', () => {
-        const newRegion = document.getElementById('regionSelect').value;
-        ({ loginBase, apiBase } = buildEnv(newRegion));
-        window.location.hash = '';
-        window.location.href = buildAuthorizeUrl(loginBase);
-      });
-      toggleCreateButton();
     });
 
-    // =========================
-    // UI helpers
-    // =========================
-    function toggleCreateButton() {
-      const btn = document.getElementById('createInteractionBtn');
-      btn.disabled = !(document.getElementById('queueSelect').value && document.getElementById('userSelect').value);
-    }
-    function showLoader(show){ document.getElementById('loader').style.display = show ? 'block' : 'none'; }
-    function showStatusMessage(msg, type='success'){ const el = document.getElementById('statusMessage'); el.style.display='block'; el.className = type; el.innerHTML = msg; }
+    function initializeApp(token) {
+      populateDropdowns(token);
 
-    // =========================
-    // Data loading
-    // =========================
-    async function fetchAllPages(url) {
-      let all = [], pageNumber = 1, more = true;
-      while (more) {
-        const r = await fetch(`${url}?pageNumber=${pageNumber}&pageSize=25`, { headers:{ Authorization:`Bearer ${accessToken}` }});
-        if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
-        const data = await r.json();
-        all = all.concat(data.entities || []);
-        more = data.pageCount > pageNumber; pageNumber++;
-      }
-      return all;
+      document.getElementById('createInteractionBtn').addEventListener('click', () => {
+        createInteraction(token);
+      });
     }
 
-    async function populateDropdowns() {
+    async function populateDropdowns(token) {
       try {
-        const queues = await fetchAllPages(`${apiBase}/api/v2/routing/queues`);
-        const users  = await fetchAllPages(`${apiBase}/api/v2/users`);
+        const queues = await fetchAllPages('https://api.mypurecloud.ie/api/v2/routing/queues', token);
+        const users = await fetchAllPages('https://api.mypurecloud.ie/api/v2/users', token);
 
         const queueSelect = document.getElementById('queueSelect');
-        const filteredQueues = queues.filter(q => whitelistedQueueIds.includes(q.id));
-        filteredQueues.forEach(q => queueSelect.add(new Option(q.name, q.id)));
+        queues.forEach(queue => {
+          const option = document.createElement('option');
+          option.value = queue.id;
+          option.text = queue.name;
+          queueSelect.add(option);
+        });
 
         const userSelect = document.getElementById('userSelect');
-        const filteredUsers = users.filter(u => whitelistedUserIds.includes(u.id));
-        filteredUsers.forEach(u => userSelect.add(new Option(u.name, u.id)));
-
-        if (!filteredQueues.length) { queueSelect.add(new Option('No allowed queues','')); queueSelect.disabled = true; }
-        if (!filteredUsers.length) { userSelect.add(new Option('No allowed users','')); userSelect.disabled = true; }
-      } catch (e) {
-        console.error(e);
-        showStatusMessage(`Error loading data: ${e.message}`, 'error');
-      }
-    }
-
-    // =========================
-    // Guards (config/eligibility)
-    // =========================
-    async function ensureQueueAllowsManualAssignment(queueId) {
-      const r = await fetch(`${apiBase}/api/v2/routing/queues/${queueId}`, {
-        headers:{ Authorization:`Bearer ${accessToken}` }
-      });
-      if (!r.ok) throw new Error(`Can't read queue: ${r.status} ${r.statusText}`);
-      const q = await r.json();
-      const enabled = !!(q.enableManualAssignment ?? q.manualAssignmentEnabled);
-      if (!enabled) throw new Error('Manual assignment is disabled on this queue (Admin → Queues → General → “Enable Manual Assignment”).');
-    }
-    async function ensureUserIsQueueMember(queueId, userId) {
-      let page=1, found=false;
-      while(!found) {
-        const r = await fetch(
-          `${apiBase}/api/v2/routing/queues/${queueId}/members?pageNumber=${page}&pageSize=100`,
-          { headers:{ Authorization:`Bearer ${accessToken}` } }
-        );
-        if (!r.ok) throw new Error(`Can't list queue members: ${r.status} ${r.statusText}`);
-        const data = await r.json();
-        found = (data.entities||[]).some(m => m.id === userId);
-        if (found) break;
-        if (!data.nextUri) break;
-        page++;
-      }
-      if (!found) throw new Error('Selected user is not a member of the selected queue.');
-    }
-
-    // =========================
-    // Race guards (state/participants)
-    // =========================
-    async function waitForAcdParticipant(conversationId, queueId, { timeoutMs=20000, intervalMs=500 } = {}) {
-      const start = Date.now();
-      while (Date.now() - start < timeoutMs) {
-        const r = await fetch(`${apiBase}/api/v2/conversations/${conversationId}`, {
-          headers:{ Authorization:`Bearer ${accessToken}` }
+        users.forEach(user => {
+          const option = document.createElement('option');
+          option.value = user.id;
+          option.text = user.name;
+          userSelect.add(option);
         });
-        if (r.ok) {
-          const c = await r.json();
-          const acd = (c.participants||[]).find(p => p.purpose === 'acd' && p.queueId === queueId);
-          if (acd) return acd;
-        }
-        await delay(intervalMs);
+
+      } catch (error) {
+        console.error('Error populating dropdowns:', error);
+        document.getElementById('statusMessage').innerText = `Error loading data: ${error.message}`;
       }
-      throw new Error('Timed out waiting for ACD participant on the queue.');
     }
 
-    async function waitForAgentLeg(conversationId, userId, { timeoutMs=20000, intervalMs=500 } = {}) {
-      const start = Date.now();
-      while (Date.now() - start < timeoutMs) {
-        const r = await fetch(`${apiBase}/api/v2/conversations/${conversationId}`, {
-          headers:{ Authorization:`Bearer ${accessToken}` }
+    async function fetchAllPages(url, token) {
+      let allItems = [];
+      let pageNumber = 1;
+      let hasMorePages = true;
+
+      while (hasMorePages) {
+        const response = await fetch(`${url}?pageNumber=${pageNumber}&pageSize=25`, {
+          headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (r.ok) {
-          const c = await r.json();
-          const agent = (c.participants||[]).find(p =>
-            (p.purpose === 'agent' || p.purpose === 'user') &&
-            p.userId === userId
-          );
-          if (agent) return agent;
+
+        if (!response.ok) {
+          throw new Error(`Error fetching data: ${response.status} ${response.statusText}`);
         }
-        await delay(intervalMs);
+
+        const data = await response.json();
+        allItems = allItems.concat(data.entities);
+
+        if (data.pageCount > pageNumber) {
+          pageNumber++;
+        } else {
+          hasMorePages = false;
+        }
       }
-      throw new Error('Agent leg for selected user did not appear in time.');
+
+      return allItems;
     }
 
-    function delay(ms){ return new Promise(r => setTimeout(r, ms)); }
-
-    // =========================
-    // Main flow (PATCH-based assignment)
-    // =========================
-    async function createInteraction() {
+    async function createInteraction(token) {
       const queueId = document.getElementById('queueSelect').value;
-      const userId  = document.getElementById('userSelect').value;
-      const externalReference = (document.getElementById('externalReference').value || '').trim();
-
-      if (!queueId || !userId) return showStatusMessage('Please select both a queue and a user', 'error');
-
-      showLoader(true); showStatusMessage('', 'success');
+      const userId = document.getElementById('userSelect').value;
+      const externalReference = document.getElementById('externalReference').value;
 
       try {
-        await ensureQueueAllowsManualAssignment(queueId);
-        await ensureUserIsQueueMember(queueId, userId);
-
-        // 1) Create the email conversation on the selected queue
-        const createRes = await fetch(`${apiBase}/api/v2/conversations/emails`, {
-          method:'POST',
-          headers:{ Authorization:`Bearer ${accessToken}`, 'Content-Type':'application/json' },
+        const interactionResponse = await fetch('https://api.mypurecloud.ie/api/v2/conversations/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
           body: JSON.stringify({
-            queueId,
-            provider:'QualityForm',
-            direction:'INBOUND',
-            fromName:'External Work',
+            queueId: queueId,
+            provider: 'QualityForm',
+            direction: 'INBOUND',
+            fromName: 'External Work',
             attributes: { 'External Link': externalReference }
           })
         });
-        if (!createRes.ok) throw new Error(await formatHttpError('Error creating interaction', createRes));
-        const interaction = await createRes.json();
+
+        if (!interactionResponse.ok) {
+          throw new Error(`Error creating interaction: ${interactionResponse.status} ${interactionResponse.statusText}`);
+        }
+
+        const interaction = await interactionResponse.json();
         const conversationId = interaction.id;
 
-        // 2) Wait for the ACD leg on that queue
-        const acd = await waitForAcdParticipant(conversationId, queueId);
-
-        // 3) PATCH the email conversation to set the ACD participant's userId to the selected user
-        //    (This mirrors the schema you posted; include only the fields we intend to change.)
-        const patchBody = {
-          participants: [
-            {
-              id: acd.id,
-              userId: userId,
-              // Optional: you can set a friendly name on the participant if you wish
-              // name: document.getElementById('userSelect').selectedOptions[0]?.text || undefined
-            }
-          ],
-          // Optional: carry an external tag for later reporting
-          externalTag: externalReference || undefined
-        };
-
-        const patchAssign = await fetch(`${apiBase}/api/v2/conversations/emails/${conversationId}`, {
-          method:'PATCH',
-          headers:{ Authorization:`Bearer ${accessToken}`, 'Content-Type':'application/json' },
-          body: JSON.stringify(patchBody)
+        const conversationDetailsResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (!patchAssign.ok) throw new Error(await formatHttpError('Participant patch failed', patchAssign));
+        if (!conversationDetailsResponse.ok) {
+          throw new Error(`Error fetching conversation details: ${conversationDetailsResponse.status} ${conversationDetailsResponse.statusText}`);
+        }
+        const conversationDetails = await conversationDetailsResponse.json();
+        const participantId = conversationDetails.participants[1].id;
 
-        // 4) Verify an agent/user leg for that user now exists
-        await waitForAgentLeg(conversationId, userId);
+        const assignResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}/participants/${participantId}/replace`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ userId: userId })
+        });
 
-        // 5) Disconnect via the same PATCH endpoint (your requested behaviour)
-        const patchDisconnect = await fetch(`${apiBase}/api/v2/conversations/emails/${conversationId}`, {
-          method:'PATCH',
-          headers:{ Authorization:`Bearer ${accessToken}`, 'Content-Type':'application/json' },
+        if (!assignResponse.ok) {
+          throw new Error(`Error assigning user: ${assignResponse.status} ${assignResponse.statusText}`);
+        }
+
+        const disconnectResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
           body: JSON.stringify({ state: 'disconnected' })
         });
-        if (!patchDisconnect.ok) throw new Error(await formatHttpError('Disconnect failed', patchDisconnect));
 
-        const queueName = document.getElementById('queueSelect').selectedOptions[0]?.text || 'Queue';
-        const userName  = document.getElementById('userSelect').selectedOptions[0]?.text || 'User';
-        showStatusMessage(`Interaction for <b>${userName}</b> in <b>${queueName}</b> created and assigned (via PATCH), then disconnected for filing. Check <b>Performance &gt; Workspace &gt; Interactions</b>.`);
-      } catch (e) {
-        console.error(e);
-        showStatusMessage(e.message, 'error');
-      } finally {
-        showLoader(false);
+        if (!disconnectResponse.ok) {
+          throw new Error(`Error disconnecting conversation: ${disconnectResponse.status} ${disconnectResponse.statusText}`);
+        }
+
+        document.getElementById('statusMessage').innerText = 'Interaction created and assigned successfully!';
+
+      } catch (error) {
+        console.error('Error during interaction creation:', error);
+        document.getElementById('statusMessage').innerText = `Error: ${error.message}`;
       }
-    }
-
-    // =========================
-    // Error helper
-    // =========================
-    async function formatHttpError(prefix, res) {
-      let txt = '';
-      try { txt = await res.text(); } catch (_) {}
-      return `${prefix}: ${res.status} ${res.statusText}${txt ? ' — ' + txt : ''}`;
     }
   </script>
 </body>
