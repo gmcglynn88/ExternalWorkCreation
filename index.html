@@ -6,7 +6,7 @@
   <title>External Work Creation</title>
   <style>
     :root { --primary-color:#63AB8F; --primary-hover:#4D8F77; --border-color:#e0e0e0; --shadow:0 2px 8px rgba(0,0,0,.1); }
-    body{font-family:'Aptos','Segoe UI',system-ui,-apple-system,sans-serif;background:#f9f9f9;margin:0;padding:2rem;max-width:600px;margin-inline:auto;color:#333;line-height:1.6}
+    body{font-family:'Aptos','Segoe UI',system-ui,-apple-system,sans-serif;background:#f9f9f9;margin:0;padding:2rem;max-width:650px;margin-inline:auto;color:#333;line-height:1.6}
     .card{background:#fff;border-radius:8px;box-shadow:var(--shadow);padding:2rem;margin-top:2rem}
     .logo-container{text-align:center;margin-bottom:1.5rem}
     #logo{max-width:180px;height:auto;margin-bottom:1rem}
@@ -14,6 +14,7 @@
     label{display:block;margin:1.2rem 0 .4rem;font-weight:500;color:#555}
     select,input{width:100%;padding:.8rem;border:1px solid var(--border-color);border-radius:4px;font:inherit;transition:border .2s}
     select:focus,input:focus{outline:none;border-color:var(--primary-color);box-shadow:0 0 0 2px rgba(99,171,143,.2)}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     button{width:100%;background:var(--primary-color);color:#fff;border:none;padding:.9rem;font-size:1rem;font-weight:500;border-radius:4px;cursor:pointer;transition:background .2s;margin-top:2rem;text-transform:uppercase;letter-spacing:.5px}
     button:hover{background:var(--primary-hover)}
     button:disabled{opacity:.6;cursor:not-allowed}
@@ -23,6 +24,7 @@
     .loader{display:none;text-align:center;margin:1rem 0}
     .spinner{border:3px solid rgba(0,0,0,.1);border-top:3px solid var(--primary-color);border-radius:50%;width:20px;height:20px;animation:spin 1s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px}
     @keyframes spin{to{transform:rotate(360deg)}}
+    small.hint{color:#666;display:block;margin-top:.25rem}
   </style>
 </head>
 <body>
@@ -32,14 +34,33 @@
     </div>
     <h1>External Work Creation</h1>
 
-    <label for="queueSelect">Select Queue:</label>
+    <div class="row">
+      <div>
+        <label for="regionSelect">Genesys Cloud Region</label>
+        <select id="regionSelect">
+          <!-- Common EU regions first -->
+          <option value="mypurecloud.ie" selected>Dublin (mypurecloud.ie)</option>
+          <option value="euw2.pure.cloud">London (euw2.pure.cloud)</option>
+          <!-- A few extras in case you need them -->
+          <option value="mypurecloud.de">Frankfurt (mypurecloud.de)</option>
+          <option value="mypurecloud.com">US-East (mypurecloud.com)</option>
+          <option value="usw2.pure.cloud">US-West2 (usw2.pure.cloud)</option>
+          <option value="apne2.pure.cloud">Tokyo (apne2.pure.cloud)</option>
+          <option value="aps1.pure.cloud">Sydney (aps1.pure.cloud)</option>
+        </select>
+        <small class="hint">Pick the org’s home region (Dublin vs London matters).</small>
+      </div>
+      <div>
+        <label for="externalReference">External Reference</label>
+        <input type="text" id="externalReference" placeholder="Optional ref/link">
+      </div>
+    </div>
+
+    <label for="queueSelect">Select Queue</label>
     <select id="queueSelect"></select>
 
-    <label for="userSelect">Select User:</label>
+    <label for="userSelect">Select User</label>
     <select id="userSelect"></select>
-
-    <label for="externalReference">External Reference:</label>
-    <input type="text" id="externalReference" placeholder="Enter external reference (optional)">
 
     <div class="loader" id="loader"><div class="spinner"></div><span>Creating interaction...</span></div>
     <button id="createInteractionBtn" disabled>Create Proxy Interaction</button>
@@ -48,10 +69,11 @@
 
   <script>
     // =========================
-    // Config
+    // Config you may edit
     // =========================
     const clientId = 'f2a0fa16-33cb-480b-a4ef-4766812dfb81';
 
+    // Whitelists (unchanged from your snippet)
     const whitelistedUserIds = [
       'fa677b42-4aff-45af-b7e7-749418788b88',
       '206a7f52-4f89-446f-afbf-ac879147a7ad',
@@ -69,28 +91,69 @@
     ];
 
     // =========================
-    // OAuth
+    // Region plumbing
     // =========================
+    function buildEnv(host) {
+      // host example: "mypurecloud.ie" or "euw2.pure.cloud"
+      const isPureCloud = host.endsWith('pure.cloud');
+      const loginBase = `https://login.${host}`;
+      const apiBase   = isPureCloud ? `https://api.${host}` : `https://api.${host}`;
+      return { loginBase, apiBase };
+    }
+
     function getExactRedirectUri(){ return `${location.origin}${location.pathname}`; }
-    const redirectUri = getExactRedirectUri();
-    const oauthUrl = `https://login.euw2.pure.cloud/oauth/authorize?client_id=${clientId}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
-    let accessToken = null;
 
-    document.addEventListener('DOMContentLoaded', () => {
-      const hash = window.location.hash.substring(1);
+    function getAccessTokenFromHash() {
+      const hash = window.location.hash.replace(/^#/, '');
       const params = new URLSearchParams(hash);
-      accessToken = params.get('access_token');
-      if (!accessToken) window.location.href = oauthUrl;
-      else initializeApp();
-    });
+      return params.get('access_token');
+    }
 
-    async function initializeApp() {
+    function buildAuthorizeUrl(loginBase) {
+      const redirectUri = getExactRedirectUri();
+      return `${loginBase}/oauth/authorize?client_id=${encodeURIComponent(clientId)}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
+    }
+
+    // =========================
+    // State
+    // =========================
+    let accessToken = null;
+    let apiBase = 'https://api.mypurecloud.ie';     // default Dublin
+    let loginBase = 'https://login.mypurecloud.ie'; // default Dublin
+
+    // =========================
+    // Boot
+    // =========================
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Initialise region bases from select
+      const region = document.getElementById('regionSelect').value;
+      ({ loginBase, apiBase } = buildEnv(region));
+
+      // If the page was reloaded after OAuth, grab token
+      accessToken = getAccessTokenFromHash();
+
+      // Populate dropdowns once we have a token, otherwise kick off OAuth
+      if (!accessToken) {
+        window.location.href = buildAuthorizeUrl(loginBase);
+        return;
+      }
+
       await populateDropdowns();
       document.getElementById('createInteractionBtn').addEventListener('click', createInteraction);
       document.getElementById('queueSelect').addEventListener('change', toggleCreateButton);
       document.getElementById('userSelect').addEventListener('change', toggleCreateButton);
+
+      // If they switch region, start a fresh OAuth round against that region.
+      document.getElementById('regionSelect').addEventListener('change', () => {
+        const newRegion = document.getElementById('regionSelect').value;
+        ({ loginBase, apiBase } = buildEnv(newRegion));
+        // Clear token and re-auth to the selected region
+        window.location.hash = '';
+        window.location.href = buildAuthorizeUrl(loginBase);
+      });
+
       toggleCreateButton();
-    }
+    });
 
     // =========================
     // UI helpers
@@ -105,10 +168,22 @@
     // =========================
     // Data loading
     // =========================
+    async function fetchAllPages(url) {
+      let all = [], pageNumber = 1, more = true;
+      while (more) {
+        const r = await fetch(`${url}?pageNumber=${pageNumber}&pageSize=25`, { headers:{ Authorization:`Bearer ${accessToken}` }});
+        if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+        const data = await r.json();
+        all = all.concat(data.entities || []);
+        more = data.pageCount > pageNumber; pageNumber++;
+      }
+      return all;
+    }
+
     async function populateDropdowns() {
       try {
-        const queues = await fetchAllPages('https://api.euw2.pure.cloud/api/v2/routing/queues');
-        const users  = await fetchAllPages('https://api.euw2.pure.cloud/api/v2/users');
+        const queues = await fetchAllPages(`${apiBase}/api/v2/routing/queues`);
+        const users  = await fetchAllPages(`${apiBase}/api/v2/users`);
 
         const queueSelect = document.getElementById('queueSelect');
         const filteredQueues = queues.filter(q => whitelistedQueueIds.includes(q.id));
@@ -126,23 +201,11 @@
       }
     }
 
-    async function fetchAllPages(url) {
-      let all = [], pageNumber = 1, more = true;
-      while (more) {
-        const r = await fetch(`${url}?pageNumber=${pageNumber}&pageSize=25`, { headers:{ Authorization:`Bearer ${accessToken}` }});
-        if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
-        const data = await r.json();
-        all = all.concat(data.entities || []);
-        more = data.pageCount > pageNumber; pageNumber++;
-      }
-      return all;
-    }
-
     // =========================
     // Guards (config/eligibility)
     // =========================
     async function ensureQueueAllowsManualAssignment(queueId) {
-      const r = await fetch(`https://api.euw2.pure.cloud/api/v2/routing/queues/${queueId}`, {
+      const r = await fetch(`${apiBase}/api/v2/routing/queues/${queueId}`, {
         headers:{ Authorization:`Bearer ${accessToken}` }
       });
       if (!r.ok) throw new Error(`Can't read queue: ${r.status} ${r.statusText}`);
@@ -154,7 +217,7 @@
       let page=1, found=false;
       while(!found) {
         const r = await fetch(
-          `https://api.euw2.pure.cloud/api/v2/routing/queues/${queueId}/members?pageNumber=${page}&pageSize=100`,
+          `${apiBase}/api/v2/routing/queues/${queueId}/members?pageNumber=${page}&pageSize=100`,
           { headers:{ Authorization:`Bearer ${accessToken}` } }
         );
         if (!r.ok) throw new Error(`Can't list queue members: ${r.status} ${r.statusText}`);
@@ -173,7 +236,7 @@
     async function waitForAcdParticipant(conversationId, queueId, { timeoutMs=20000, intervalMs=500 } = {}) {
       const start = Date.now();
       while (Date.now() - start < timeoutMs) {
-        const r = await fetch(`https://api.euw2.pure.cloud/api/v2/conversations/${conversationId}`, {
+        const r = await fetch(`${apiBase}/api/v2/conversations/${conversationId}`, {
           headers:{ Authorization:`Bearer ${accessToken}` }
         });
         if (r.ok) {
@@ -190,7 +253,7 @@
     async function waitForAgentAssignment(conversationId, userId, { timeoutMs=20000, intervalMs=500 } = {}) {
       const start = Date.now();
       while (Date.now() - start < timeoutMs) {
-        const r = await fetch(`https://api.euw2.pure.cloud/api/v2/conversations/${conversationId}`, {
+        const r = await fetch(`${apiBase}/api/v2/conversations/${conversationId}`, {
           headers:{ Authorization:`Bearer ${accessToken}` }
         });
         if (r.ok) {
@@ -225,13 +288,12 @@
       showLoader(true); showStatusMessage('', 'success');
 
       try {
-        // Eligibility checks (cheap/fast, avoid silent no-ops)
+        // Pre-flight checks (don’t enforce On-Queue per your requirement)
         await ensureQueueAllowsManualAssignment(queueId);
         await ensureUserIsQueueMember(queueId, userId);
-        // NOTE: Per your requirement, we do NOT enforce On-Queue here.
 
-        // 1) Create the email interaction on the queue
-        const createRes = await fetch('https://api.euw2.pure.cloud/api/v2/conversations/emails', {
+        // 1) Create the email conversation on the selected queue
+        const createRes = await fetch(`${apiBase}/api/v2/conversations/emails`, {
           method:'POST',
           headers:{ Authorization:`Bearer ${accessToken}`, 'Content-Type':'application/json' },
           body: JSON.stringify({
@@ -246,24 +308,24 @@
         const interaction = await createRes.json();
         const conversationId = interaction.id;
 
-        // 2) Wait for the ACD leg (prevents race with assignment)
+        // 2) Wait for the ACD leg to materialise
         await waitForAcdParticipant(conversationId, queueId);
 
-        // 3) Assign to the selected user (correct endpoint)
-        const assignRes = await fetch(`https://api.euw2.pure.cloud/api/v2/conversations/${conversationId}/assign`, {
+        // 3) Assign to the selected user (this is the endpoint that works cross-region)
+        const assignRes = await fetch(`${apiBase}/api/v2/conversations/${conversationId}/assign`, {
           method:'POST',
           headers:{ Authorization:`Bearer ${accessToken}`, 'Content-Type':'application/json' },
           body: JSON.stringify({ userId })
         });
         if (!assignRes.ok) throw new Error(await formatHttpError('Assign failed', assignRes));
 
-        // 4) PROVE it’s assigned: wait until an agent leg for that user exists
+        // 4) Confirm the agent leg exists for that user before we disconnect
         await waitForAgentAssignment(conversationId, userId);
 
-        // 5) Optional nicety: create + link external contact
+        // 5) Optional: create + link external contact
         const firstName = 'External';
         const lastName  = externalReference || 'Work Item';
-        const contactRes = await fetch('https://api.euw2.pure.cloud/api/v2/externalcontacts/contacts', {
+        const contactRes = await fetch(`${apiBase}/api/v2/externalcontacts/contacts`, {
           method:'POST',
           headers:{ Authorization:`Bearer ${accessToken}`, 'Content-Type':'application/json' },
           body: JSON.stringify({
@@ -274,23 +336,23 @@
         });
         if (contactRes.ok) {
           const contact = await contactRes.json();
-          await fetch(`https://api.euw2.pure.cloud/api/v2/externalcontacts/conversations/${conversationId}`, {
+          await fetch(`${apiBase}/api/v2/externalcontacts/conversations/${conversationId}`, {
             method:'PUT',
             headers:{ Authorization:`Bearer ${accessToken}`, 'Content-Type':'application/json' },
             body: JSON.stringify({ externalContactId: contact.id })
           });
         }
 
-        // 6) Only now disconnect (after we know the agent leg exists)
-        await fetch(`https://api.euw2.pure.cloud/api/v2/conversations/emails/${conversationId}`, {
+        // 6) Now we can safely disconnect
+        await fetch(`${apiBase}/api/v2/conversations/emails/${conversationId}`, {
           method:'PATCH',
           headers:{ Authorization:`Bearer ${accessToken}`, 'Content-Type':'application/json' },
           body: JSON.stringify({ state:'disconnected' })
         });
 
         const queueName = document.getElementById('queueSelect').selectedOptions[0]?.text || 'Queue';
-        const userName = document.getElementById('userSelect').selectedOptions[0]?.text || 'User';
-        showStatusMessage(`Interaction for <b>${userName}</b> in <b>${queueName}</b> created, <b>assigned</b>, and filed under <b>Performance &gt; Workspace &gt; Interactions</b>.`);
+        const userName  = document.getElementById('userSelect').selectedOptions[0]?.text || 'User';
+        showStatusMessage(`Interaction for <b>${userName}</b> in <b>${queueName}</b> created and assigned. You’ll find it in <b>Performance &gt; Workspace &gt; Interactions</b>.`);
       } catch (e) {
         console.error(e);
         showStatusMessage(e.message, 'error');
@@ -304,7 +366,7 @@
     // =========================
     async function formatHttpError(prefix, res) {
       let txt = '';
-      try { txt = await res.text(); } catch(_) {}
+      try { txt = await res.text(); } catch (_) {}
       return `${prefix}: ${res.status} ${res.statusText}${txt ? ' — ' + txt : ''}`;
     }
   </script>
