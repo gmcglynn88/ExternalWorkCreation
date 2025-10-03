@@ -38,17 +38,15 @@
       <div>
         <label for="regionSelect">Genesys Cloud Region</label>
         <select id="regionSelect">
-          <!-- Common EU regions first -->
           <option value="mypurecloud.ie" selected>Dublin (mypurecloud.ie)</option>
           <option value="euw2.pure.cloud">London (euw2.pure.cloud)</option>
-          <!-- A few extras in case you need them -->
           <option value="mypurecloud.de">Frankfurt (mypurecloud.de)</option>
           <option value="mypurecloud.com">US-East (mypurecloud.com)</option>
           <option value="usw2.pure.cloud">US-West2 (usw2.pure.cloud)</option>
           <option value="apne2.pure.cloud">Tokyo (apne2.pure.cloud)</option>
           <option value="aps1.pure.cloud">Sydney (aps1.pure.cloud)</option>
         </select>
-        <small class="hint">Pick the org’s home region (Dublin vs London matters).</small>
+        <small class="hint">Pick the org’s region (Dublin vs London matters).</small>
       </div>
       <div>
         <label for="externalReference">External Reference</label>
@@ -73,7 +71,7 @@
     // =========================
     const clientId = 'f2a0fa16-33cb-480b-a4ef-4766812dfb81';
 
-    // Whitelists (unchanged from your snippet)
+    // Whitelists (unchanged)
     const whitelistedUserIds = [
       'fa677b42-4aff-45af-b7e7-749418788b88',
       '206a7f52-4f89-446f-afbf-ac879147a7ad',
@@ -94,21 +92,16 @@
     // Region plumbing
     // =========================
     function buildEnv(host) {
-      // host example: "mypurecloud.ie" or "euw2.pure.cloud"
-      const isPureCloud = host.endsWith('pure.cloud');
       const loginBase = `https://login.${host}`;
-      const apiBase   = isPureCloud ? `https://api.${host}` : `https://api.${host}`;
+      const apiBase   = `https://api.${host}`;
       return { loginBase, apiBase };
     }
-
     function getExactRedirectUri(){ return `${location.origin}${location.pathname}`; }
-
     function getAccessTokenFromHash() {
       const hash = window.location.hash.replace(/^#/, '');
       const params = new URLSearchParams(hash);
       return params.get('access_token');
     }
-
     function buildAuthorizeUrl(loginBase) {
       const redirectUri = getExactRedirectUri();
       return `${loginBase}/oauth/authorize?client_id=${encodeURIComponent(clientId)}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
@@ -118,21 +111,17 @@
     // State
     // =========================
     let accessToken = null;
-    let apiBase = 'https://api.mypurecloud.ie';     // default Dublin
-    let loginBase = 'https://login.mypurecloud.ie'; // default Dublin
+    let apiBase = 'https://api.mypurecloud.ie';
+    let loginBase = 'https://login.mypurecloud.ie';
 
     // =========================
     // Boot
     // =========================
     document.addEventListener('DOMContentLoaded', async () => {
-      // Initialise region bases from select
       const region = document.getElementById('regionSelect').value;
       ({ loginBase, apiBase } = buildEnv(region));
 
-      // If the page was reloaded after OAuth, grab token
       accessToken = getAccessTokenFromHash();
-
-      // Populate dropdowns once we have a token, otherwise kick off OAuth
       if (!accessToken) {
         window.location.href = buildAuthorizeUrl(loginBase);
         return;
@@ -142,16 +131,12 @@
       document.getElementById('createInteractionBtn').addEventListener('click', createInteraction);
       document.getElementById('queueSelect').addEventListener('change', toggleCreateButton);
       document.getElementById('userSelect').addEventListener('change', toggleCreateButton);
-
-      // If they switch region, start a fresh OAuth round against that region.
       document.getElementById('regionSelect').addEventListener('change', () => {
         const newRegion = document.getElementById('regionSelect').value;
         ({ loginBase, apiBase } = buildEnv(newRegion));
-        // Clear token and re-auth to the selected region
         window.location.hash = '';
         window.location.href = buildAuthorizeUrl(loginBase);
       });
-
       toggleCreateButton();
     });
 
@@ -249,8 +234,7 @@
       throw new Error('Timed out waiting for ACD participant on the queue.');
     }
 
-    // After assigning, wait until the AGENT leg for the chosen user is present & active
-    async function waitForAgentAssignment(conversationId, userId, { timeoutMs=20000, intervalMs=500 } = {}) {
+    async function waitForAgentLeg(conversationId, userId, { timeoutMs=20000, intervalMs=500 } = {}) {
       const start = Date.now();
       while (Date.now() - start < timeoutMs) {
         const r = await fetch(`${apiBase}/api/v2/conversations/${conversationId}`, {
@@ -260,23 +244,19 @@
           const c = await r.json();
           const agent = (c.participants||[]).find(p =>
             (p.purpose === 'agent' || p.purpose === 'user') &&
-            p.userId === userId &&
-            (
-              (p.sessions||[]).some(s => s.state === 'connected' || s.state === 'alerting') ||
-              p.state === 'connected' || p.state === 'alerting'
-            )
+            p.userId === userId
           );
           if (agent) return agent;
         }
         await delay(intervalMs);
       }
-      throw new Error('Assigned agent leg did not appear in time (assignment may have been rejected).');
+      throw new Error('Agent leg for selected user did not appear in time.');
     }
 
     function delay(ms){ return new Promise(r => setTimeout(r, ms)); }
 
     // =========================
-    // Main flow
+    // Main flow (PATCH-based assignment)
     // =========================
     async function createInteraction() {
       const queueId = document.getElementById('queueSelect').value;
@@ -288,7 +268,6 @@
       showLoader(true); showStatusMessage('', 'success');
 
       try {
-        // Pre-flight checks (don’t enforce On-Queue per your requirement)
         await ensureQueueAllowsManualAssignment(queueId);
         await ensureUserIsQueueMember(queueId, userId);
 
@@ -308,51 +287,45 @@
         const interaction = await createRes.json();
         const conversationId = interaction.id;
 
-        // 2) Wait for the ACD leg to materialise
-        await waitForAcdParticipant(conversationId, queueId);
+        // 2) Wait for the ACD leg on that queue
+        const acd = await waitForAcdParticipant(conversationId, queueId);
 
-        // 3) Assign to the selected user (this is the endpoint that works cross-region)
-        const assignRes = await fetch(`${apiBase}/api/v2/conversations/${conversationId}/assign`, {
-          method:'POST',
-          headers:{ Authorization:`Bearer ${accessToken}`, 'Content-Type':'application/json' },
-          body: JSON.stringify({ userId })
-        });
-        if (!assignRes.ok) throw new Error(await formatHttpError('Assign failed', assignRes));
+        // 3) PATCH the email conversation to set the ACD participant's userId to the selected user
+        //    (This mirrors the schema you posted; include only the fields we intend to change.)
+        const patchBody = {
+          participants: [
+            {
+              id: acd.id,
+              userId: userId,
+              // Optional: you can set a friendly name on the participant if you wish
+              // name: document.getElementById('userSelect').selectedOptions[0]?.text || undefined
+            }
+          ],
+          // Optional: carry an external tag for later reporting
+          externalTag: externalReference || undefined
+        };
 
-        // 4) Confirm the agent leg exists for that user before we disconnect
-        await waitForAgentAssignment(conversationId, userId);
-
-        // 5) Optional: create + link external contact
-        const firstName = 'External';
-        const lastName  = externalReference || 'Work Item';
-        const contactRes = await fetch(`${apiBase}/api/v2/externalcontacts/contacts`, {
-          method:'POST',
-          headers:{ Authorization:`Bearer ${accessToken}`, 'Content-Type':'application/json' },
-          body: JSON.stringify({
-            firstName, lastName,
-            addresses:[], phoneNumbers:[], emailAddresses:[],
-            notes: externalReference ? [`Ref: ${externalReference}`] : []
-          })
-        });
-        if (contactRes.ok) {
-          const contact = await contactRes.json();
-          await fetch(`${apiBase}/api/v2/externalcontacts/conversations/${conversationId}`, {
-            method:'PUT',
-            headers:{ Authorization:`Bearer ${accessToken}`, 'Content-Type':'application/json' },
-            body: JSON.stringify({ externalContactId: contact.id })
-          });
-        }
-
-        // 6) Now we can safely disconnect
-        await fetch(`${apiBase}/api/v2/conversations/emails/${conversationId}`, {
+        const patchAssign = await fetch(`${apiBase}/api/v2/conversations/emails/${conversationId}`, {
           method:'PATCH',
           headers:{ Authorization:`Bearer ${accessToken}`, 'Content-Type':'application/json' },
-          body: JSON.stringify({ state:'disconnected' })
+          body: JSON.stringify(patchBody)
         });
+        if (!patchAssign.ok) throw new Error(await formatHttpError('Participant patch failed', patchAssign));
+
+        // 4) Verify an agent/user leg for that user now exists
+        await waitForAgentLeg(conversationId, userId);
+
+        // 5) Disconnect via the same PATCH endpoint (your requested behaviour)
+        const patchDisconnect = await fetch(`${apiBase}/api/v2/conversations/emails/${conversationId}`, {
+          method:'PATCH',
+          headers:{ Authorization:`Bearer ${accessToken}`, 'Content-Type':'application/json' },
+          body: JSON.stringify({ state: 'disconnected' })
+        });
+        if (!patchDisconnect.ok) throw new Error(await formatHttpError('Disconnect failed', patchDisconnect));
 
         const queueName = document.getElementById('queueSelect').selectedOptions[0]?.text || 'Queue';
         const userName  = document.getElementById('userSelect').selectedOptions[0]?.text || 'User';
-        showStatusMessage(`Interaction for <b>${userName}</b> in <b>${queueName}</b> created and assigned. You’ll find it in <b>Performance &gt; Workspace &gt; Interactions</b>.`);
+        showStatusMessage(`Interaction for <b>${userName}</b> in <b>${queueName}</b> created and assigned (via PATCH), then disconnected for filing. Check <b>Performance &gt; Workspace &gt; Interactions</b>.`);
       } catch (e) {
         console.error(e);
         showStatusMessage(e.message, 'error');
