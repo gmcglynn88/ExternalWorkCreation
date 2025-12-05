@@ -30,65 +30,136 @@
     .success-message{color:#14532d;background:#dcfce7;border:1px solid #bbf7d0;padding:10px;border-radius:6px}
     .info-message{color:#6b4e16;background:#fff7ed;border:1px solid #ffedd5;padding:10px;border-radius:6px}
 
-    /* Make external reference input wider */
+    /* Wider external reference input */
     #externalReference {
       width: 100%;
-      max-width: 400px; /* Increased from 300px to 400px */
+      max-width: 400px;
+    }
+
+    /* --- Tabs --- */
+    .tab-container {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+    }
+    .tab-button {
+      padding: 10px 16px;
+      border: 1px solid var(--border-color);
+      background: var(--card-bg);
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background .2s;
+    }
+    .tab-button.active {
+      background: var(--primary-color);
+      color: #fff;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
     }
   </style>
 </head>
 <body>
+
   <div id="authCard" class="card">
     <div id="auth-message" class="info-message">Authenticating with PureCloud...</div>
   </div>
 
   <div id="appContent" style="display:none;">
-    <div id="messageContainer"></div>
 
-    <div class="card">
-      <h2 class="section-title">Create Proxy Interaction</h2>
-      <div class="controls">
-        <div>
-          <label for="queueSelect">Select Queue:</label>
-          <select id="queueSelect"></select>
-        </div>
-        <div>
-          <label for="userSelect">Select User:</label>
-          <select id="userSelect"></select>
-        </div>
-        <div>
-          <label for="externalReference">External Reference:</label>
-          <input type="text" id="externalReference" placeholder="Enter external reference (optional)">
-        </div>
-      </div>
-
-      <button id="createInteractionBtn" class="full-width-btn">Create Proxy Interaction</button>
+    <div class="tab-container">
+      <button class="tab-button active" data-tab="tab-create">Create Interaction</button>
+      <button class="tab-button" data-tab="tab-guide">How to Use</button>
     </div>
 
-    <div id="results" class="card" style="display:none;"></div>
-  </div>
+    <!-- TAB: CREATE INTERACTION -->
+    <div id="tab-create" class="tab-content active">
+
+      <div id="messageContainer"></div>
+
+      <div class="card">
+        <h2 class="section-title">Create Proxy Interaction</h2>
+        <div class="controls">
+          <div>
+            <label for="queueSelect">Select Queue:</label>
+            <select id="queueSelect"></select>
+          </div>
+          <div>
+            <label for="userSelect">Select User:</label>
+            <select id="userSelect"></select>
+          </div>
+          <div>
+            <label for="externalReference">External Reference:</label>
+            <input type="text" id="externalReference" placeholder="Enter external reference (optional)">
+          </div>
+        </div>
+
+        <button id="createInteractionBtn" class="full-width-btn">Create Proxy Interaction</button>
+      </div>
+
+      <div id="results" class="card" style="display:none;"></div>
+
+    </div> <!-- end tab-create -->
+
+    <!-- TAB: HOW-TO GUIDE -->
+    <div id="tab-guide" class="tab-content">
+      <div class="card">
+        <h2 class="section-title">How to Use This Tool</h2>
+
+        <p><strong>1. Choose a Queue</strong><br>
+        Use the dropdown to select the queue the proxy interaction should be created in.</p>
+
+        <p><strong>2. Choose a User</strong><br>
+        Pick the agent who will be assigned the created interaction.</p>
+
+        <p><strong>3. Add an External Reference (Optional)</strong><br>
+        Enter anything useful such as a case ID or URL. Leave blank if not needed.</p>
+
+        <p><strong>4. Create the Proxy Interaction</strong><br>
+        Click <em>Create Proxy Interaction</em>. The tool will create an inbound email, assign it to the selected user, and disconnect it.</p>
+
+        <p><strong>5. Review the Result</strong><br>
+        A success or error message will appear depending on the outcome.</p>
+
+        <p><strong>6. Repeat as Needed</strong><br>
+        You can generate as many proxy interactions as you need.</p>
+      </div>
+    </div>
+
+  </div> <!-- end appContent -->
 
   <script>
     // ===== OAuth Config =====
     const clientId = 'fe305808-b368-4547-8af9-325d28d552bb';
-    
-    // Use the EXACT URI that's registered in Genesys Cloud
     const redirectUri = 'https://gmcglynn88.github.io/ExternalWorkCreation/';
-    
     const oauthUrl = `https://login.mypurecloud.ie/oauth/authorize?client_id=${encodeURIComponent(clientId)}&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
-
-    // Debug logging
-    console.log('OAuth Configuration:');
-    console.log('- Client ID:', clientId);
-    console.log('- Redirect URI:', redirectUri);
-    console.log('- Encoded Redirect URI:', encodeURIComponent(redirectUri));
-    console.log('- Full OAuth URL:', oauthUrl);
 
     let accessToken = null;
 
     // ===== Auth bootstrap =====
     document.addEventListener('DOMContentLoaded', () => {
-      // Parse OAuth error from the URL
+
+      // Tab switching
+      document.addEventListener("click", function(e) {
+        if (!e.target.classList.contains("tab-button")) return;
+
+        document.querySelectorAll(".tab-button").forEach(btn =>
+          btn.classList.remove("active")
+        );
+        e.target.classList.add("active");
+
+        const target = e.target.dataset.tab;
+
+        document.querySelectorAll(".tab-content").forEach(tab =>
+          tab.classList.remove("active")
+        );
+        document.getElementById(target).classList.add("active");
+      });
+
       const hash = window.location.hash.substring(1);
       const params = new URLSearchParams(hash);
       const qparams = new URLSearchParams(window.location.search);
@@ -99,7 +170,6 @@
       if (oauthError) {
         document.getElementById('auth-message').textContent = `OAuth error: ${oauthErrorDesc || oauthError}`;
         document.getElementById('auth-message').className = 'error-message';
-        console.error('OAuth error details:', { error: oauthError, description: oauthErrorDesc });
         return;
       }
 
@@ -107,14 +177,12 @@
 
       if (accessToken) {
         sessionStorage.setItem('purecloud_token', accessToken);
-        // Clean URL after successful auth
         window.location.hash = '';
         initializeApplication();
       } else if (sessionStorage.getItem('purecloud_token')) {
         accessToken = sessionStorage.getItem('purecloud_token');
         initializeApplication();
       } else {
-        console.log('Initiating OAuth flow with:', { clientId, redirectUri });
         window.location.href = oauthUrl;
       }
     });
@@ -159,7 +227,6 @@
         });
 
       } catch (error) {
-        console.error('Error populating dropdowns:', error);
         showMessage(`Error loading data: ${error.message}`, 'error');
       }
     }
@@ -174,18 +241,13 @@
           headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
         });
 
-        if (!response.ok) {
-          throw new Error(`Error fetching data: ${response.status} ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error(`Error fetching data: ${response.status} ${response.statusText}`);
 
         const data = await response.json();
         allItems = allItems.concat(data.entities || []);
 
-        if (data.pageCount > pageNumber) {
-          pageNumber++;
-        } else {
-          hasMorePages = false;
-        }
+        if (data.pageCount > pageNumber) pageNumber++;
+        else hasMorePages = false;
       }
 
       return allItems;
@@ -209,6 +271,7 @@
       button.textContent = 'Processing...';
 
       try {
+
         // Create the email interaction
         const interactionResponse = await fetch('https://api.mypurecloud.ie/api/v2/conversations/emails', {
           method: 'POST',
@@ -225,20 +288,19 @@
           })
         });
 
-        if (!interactionResponse.ok) {
-          throw new Error(`Error creating interaction: ${interactionResponse.status} ${interactionResponse.statusText}`);
-        }
+        if (!interactionResponse.ok) throw new Error(`Error creating interaction: ${interactionResponse.status} ${interactionResponse.statusText}`);
 
         const interaction = await interactionResponse.json();
         const conversationId = interaction.id;
 
-        // Get conversation details to find participant ID
+        // Get conversation participant
         const conversationDetailsResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/${conversationId}`, {
           headers: { 'Authorization': `Bearer ${accessToken}` }
         });
-        if (!conversationDetailsResponse.ok) {
+
+        if (!conversationDetailsResponse.ok)
           throw new Error(`Error fetching conversation details: ${conversationDetailsResponse.status} ${conversationDetailsResponse.statusText}`);
-        }
+
         const conversationDetails = await conversationDetailsResponse.json();
         const participantId = conversationDetails.participants[1].id;
 
@@ -252,9 +314,8 @@
           body: JSON.stringify({ userId: userId })
         });
 
-        if (!assignResponse.ok) {
+        if (!assignResponse.ok)
           throw new Error(`Error assigning user: ${assignResponse.status} ${assignResponse.statusText}`);
-        }
 
         // Disconnect the conversation
         const disconnectResponse = await fetch(`https://api.mypurecloud.ie/api/v2/conversations/emails/${conversationId}`, {
@@ -266,17 +327,13 @@
           body: JSON.stringify({ state: 'disconnected' })
         });
 
-        if (!disconnectResponse.ok) {
+        if (!disconnectResponse.ok)
           throw new Error(`Error disconnecting conversation: ${disconnectResponse.status} ${disconnectResponse.statusText}`);
-        }
 
         resultsDiv.innerHTML = `<div class="success-message">Interaction created and assigned successfully!</div>`;
-        
-        // Clear form
         document.getElementById('externalReference').value = '';
 
       } catch (error) {
-        console.error('Error during interaction creation:', error);
         resultsDiv.innerHTML = `<div class="error-message">Error: ${error.message}</div>`;
       } finally {
         button.disabled = false;
